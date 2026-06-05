@@ -1,0 +1,63 @@
+#ifndef SLIM_COMMON_HTTP_COOKIE_H
+#define SLIM_COMMON_HTTP_COOKIE_H
+
+#include <string>
+#include <string_view>
+#include <slim/SlimValue.hpp>
+
+#define SLIMCOMMONHTTPCOOKIE_VERSION  "@SLIMCOMMONHTTPCOOKIE_VERSION@"
+#define SLIMCOMMONHTTPCOOKIE_GIT_HASH "@SLIMCOMMONHTTPCOOKIE_GIT_HASH@"
+
+namespace slim::common::http {
+
+class Cookie {
+	public:
+		void set_max_age(long long ll) { max_age = ll; };
+		slim::SlimValue set_max_age(std::string_view s);
+		const long long& get_max_age() const { return max_age; };
+
+		slim::SlimValue set_name(std::string_view s);
+		const std::string& get_name() const { return name; };
+
+		slim::SlimValue set_value(std::string_view s);
+		const std::string& get_value() const { return value; };
+
+		slim::SlimValue set_path(std::string_view s);
+		const std::string& get_path() const { return path; };
+
+		slim::SlimValue set_domain(std::string_view s);
+		const std::string& get_domain() const { return domain; };
+
+		slim::SlimValue set_expires(std::string_view s);
+		const std::string& get_expires() const { return expires; };
+
+		slim::SlimValue set_same_site(std::string_view s);
+		const std::string& get_same_site() const { return same_site; };
+
+		void set_httponly(bool b) { httponly = b; };
+		slim::SlimValue set_httponly(std::string_view s);
+		bool get_httponly() const { return httponly; };
+
+		void set_partitioned(bool b) { partitioned = b; };
+		slim::SlimValue set_partitioned(std::string_view s);
+		bool get_partitioned() const { return partitioned; };
+
+		void set_secure(bool b) { secure = b; };
+		slim::SlimValue set_secure(std::string_view s);
+		bool get_secure() const { return secure; };
+
+	private:
+		long long max_age{};
+		std::string name;
+		std::string value;
+		std::string path;
+		std::string domain;
+		std::string expires;
+		std::string same_site;
+		bool        httponly : 1 = false;
+		bool        partitioned : 1 = false;
+		bool        secure : 1 = false;
+};
+
+} // slim::common::http
+#endif // SLIM_COMMON_HTTP_COOKIE_H
