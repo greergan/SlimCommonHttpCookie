@@ -42,6 +42,13 @@ TEST_CASE("set_name rejects a name containing a colon") {
     REQUIRE(r.has_error());
 }
 
+TEST_CASE("set_name trims leading and trailing whitespace before storing") {
+    slim::common::http::Cookie c;
+    auto r = c.set_name("  session_id  ");
+    REQUIRE(r);
+    REQUIRE(c.get_name() == "session_id");
+}
+
 // ---------------------------------------------------------------------------
 // set_value
 // ---------------------------------------------------------------------------
@@ -81,6 +88,13 @@ TEST_CASE("set_value rejects a value with a DEL character") {
     slim::common::http::Cookie c;
     auto r = c.set_value("bad\x7Fvalue");
     REQUIRE(r.has_error());
+}
+
+TEST_CASE("set_value trims leading and trailing whitespace before storing") {
+    slim::common::http::Cookie c;
+    auto r = c.set_value("  abc123  ");
+    REQUIRE(r);
+    REQUIRE(c.get_value() == "abc123");
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +137,13 @@ TEST_CASE("set_path rejects a path with a control character") {
     slim::common::http::Cookie c;
     auto r = c.set_path("/bad\x1Fpath");
     REQUIRE(r.has_error());
+}
+
+TEST_CASE("set_path trims leading and trailing whitespace before storing") {
+    slim::common::http::Cookie c;
+    auto r = c.set_path("  /api/v1  ");
+    REQUIRE(r);
+    REQUIRE(c.get_path() == "/api/v1");
 }
 
 // ---------------------------------------------------------------------------
@@ -198,6 +219,13 @@ TEST_CASE("set_domain rejects a label with an invalid character") {
     REQUIRE(r.has_error());
 }
 
+TEST_CASE("set_domain trims leading and trailing whitespace before storing") {
+    slim::common::http::Cookie c;
+    auto r = c.set_domain("  example.com  ");
+    REQUIRE(r);
+    REQUIRE(c.get_domain() == "example.com");
+}
+
 // ---------------------------------------------------------------------------
 // set_expires
 // ---------------------------------------------------------------------------
@@ -233,30 +261,37 @@ TEST_CASE("set_expires rejects an ISO 8601 date") {
     REQUIRE(r.has_error());
 }
 
+TEST_CASE("set_expires trims leading and trailing whitespace before storing") {
+    slim::common::http::Cookie c;
+    auto r = c.set_expires("  Thu, 01 Jan 2099 00:00:00 GMT  ");
+    REQUIRE(r);
+    REQUIRE(c.get_expires() == "Thu, 01 Jan 2099 00:00:00 GMT");
+}
+
 // ---------------------------------------------------------------------------
 // set_max_age
 // ---------------------------------------------------------------------------
 
-using max_age_t = std::make_unsigned_t<std::time_t>;
+using u_time_t = std::make_unsigned_t<std::time_t>;
 
 TEST_CASE("set_max_age accepts zero") {
     slim::common::http::Cookie c;
-    c.set_max_age(max_age_t{3600});
+    c.set_max_age(u_time_t{3600});
     auto r = c.set_max_age("0");
     REQUIRE(r == 0);
-    REQUIRE(c.get_max_age() == max_age_t{0});
+    REQUIRE(c.get_max_age() == u_time_t{0});
 }
 
 TEST_CASE("set_max_age accepts a positive integer") {
     slim::common::http::Cookie c;
     auto r = c.set_max_age("3600");
     REQUIRE(r == 3600);
-    REQUIRE(c.get_max_age() == max_age_t{3600});
+    REQUIRE(c.get_max_age() == u_time_t{3600});
 }
 
 TEST_CASE("set_max_age accepts the maximum time_t value") {
     slim::common::http::Cookie c;
-    constexpr max_age_t max_val = static_cast<max_age_t>(std::numeric_limits<std::time_t>::max());
+    constexpr u_time_t max_val = static_cast<u_time_t>(std::numeric_limits<std::time_t>::max());
     auto r = c.set_max_age(std::to_string(max_val));
     REQUIRE(r == static_cast<long long>(max_val));
     REQUIRE(c.get_max_age() == max_val);
@@ -264,7 +299,7 @@ TEST_CASE("set_max_age accepts the maximum time_t value") {
 
 TEST_CASE("set_max_age rejects a value exceeding the maximum time_t value") {
     slim::common::http::Cookie c;
-    constexpr max_age_t over_max = static_cast<max_age_t>(std::numeric_limits<std::time_t>::max()) + 1;
+    constexpr u_time_t over_max = static_cast<u_time_t>(std::numeric_limits<std::time_t>::max()) + 1;
     auto r = c.set_max_age(std::to_string(over_max));
     REQUIRE(r.has_error());
 }
@@ -328,6 +363,13 @@ TEST_CASE("set_same_site is case-insensitive") {
     slim::common::http::Cookie c;
     auto r = c.set_same_site("strict");
     REQUIRE(r);
+}
+
+TEST_CASE("set_same_site trims leading and trailing whitespace before storing") {
+    slim::common::http::Cookie c;
+    auto r = c.set_same_site("  Strict  ");
+    REQUIRE(r);
+    REQUIRE(c.get_same_site() == "Strict");
 }
 
 TEST_CASE("set_same_site rejects an unrecognised value") {
@@ -485,14 +527,14 @@ TEST_CASE("set_partitioned bool overload sets false") {
     REQUIRE(c.get_partitioned() == false);
 }
 
-TEST_CASE("set_max_age max_age_t overload stores the value directly") {
+TEST_CASE("set_max_age u_time_t overload stores the value directly") {
     slim::common::http::Cookie c;
-    c.set_max_age(max_age_t{7200});
-    REQUIRE(c.get_max_age() == max_age_t{7200});
+    c.set_max_age(u_time_t{7200});
+    REQUIRE(c.get_max_age() == u_time_t{7200});
 }
 
-TEST_CASE("set_max_age max_age_t overload stores zero") {
+TEST_CASE("set_max_age u_time_t overload stores zero") {
     slim::common::http::Cookie c;
-    c.set_max_age(max_age_t{0});
-    REQUIRE(c.get_max_age() == max_age_t{0});
+    c.set_max_age(u_time_t{0});
+    REQUIRE(c.get_max_age() == u_time_t{0});
 }
