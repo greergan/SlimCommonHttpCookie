@@ -9,12 +9,13 @@
 #define SLIMCOMMONHTTPCOOKIE_GIT_HASH "@SLIMCOMMONHTTPCOOKIE_GIT_HASH@"
 
 namespace slim::common::http {
+using max_age_t = std::make_unsigned_t<std::time_t>;
 
 class Cookie {
 	public:
-		void set_max_age(long long ll) { max_age = ll; };
+		void set_max_age(max_age_t v) { max_age = v; };
 		slim::SlimValue set_max_age(std::string_view s);
-		const long long& get_max_age() const { return max_age; };
+		const max_age_t& get_max_age() const { return max_age; };
 
 		slim::SlimValue set_name(std::string_view s);
 		const std::string& get_name() const { return name; };
@@ -47,7 +48,7 @@ class Cookie {
 		bool get_secure() const { return secure; };
 
 	private:
-		long long max_age{};
+		max_age_t max_age{};
 		std::string name;
 		std::string value;
 		std::string path;
