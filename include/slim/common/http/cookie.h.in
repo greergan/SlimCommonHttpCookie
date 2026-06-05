@@ -8,6 +8,12 @@
 #define SLIMCOMMONHTTPCOOKIE_VERSION  "@SLIMCOMMONHTTPCOOKIE_VERSION@"
 #define SLIMCOMMONHTTPCOOKIE_GIT_HASH "@SLIMCOMMONHTTPCOOKIE_GIT_HASH@"
 
+/*
+documentation hints,
+	using max_age_t = std::make_unsigned_t<std::time_t>;
+	secure must be set prior to same site to pass SameSite=None case
+*/
+
 namespace slim::common::http {
 using max_age_t = std::make_unsigned_t<std::time_t>;
 
