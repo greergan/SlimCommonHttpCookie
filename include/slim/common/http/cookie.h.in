@@ -1,6 +1,8 @@
 #ifndef SLIM_COMMON_HTTP_COOKIE_H
 #define SLIM_COMMON_HTTP_COOKIE_H
 
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <slim/SlimValue.hpp>
@@ -8,62 +10,72 @@
 #define SLIMCOMMONHTTPCOOKIE_VERSION  "@SLIMCOMMONHTTPCOOKIE_VERSION@"
 #define SLIMCOMMONHTTPCOOKIE_GIT_HASH "@SLIMCOMMONHTTPCOOKIE_GIT_HASH@"
 
-/*
-documentation hints,
-	using max_age_t = std::make_unsigned_t<std::time_t>;
-	secure must be set prior to same site to pass SameSite=None case
-*/
-
 namespace slim::common::http {
-using max_age_t = std::make_unsigned_t<std::time_t>;
-
 class Cookie {
-	public:
-		void set_max_age(max_age_t v) { max_age = v; };
-		slim::SlimValue set_max_age(std::string_view s);
-		const max_age_t& get_max_age() const { return max_age; };
+    public:
+		Cookie() = default;
+    	Cookie(const Cookie& other) = delete;
+    	Cookie& operator=(const Cookie& other) = delete;
 
-		slim::SlimValue set_name(std::string_view s);
-		const std::string& get_name() const { return name; };
+    	Cookie(Cookie&& other) = default;
+    	Cookie& operator=(Cookie&& other) = default;
 
-		slim::SlimValue set_value(std::string_view s);
-		const std::string& get_value() const { return value; };
+		~Cookie() = default;
 
-		slim::SlimValue set_path(std::string_view s);
-		const std::string& get_path() const { return path; };
+        static slim::ErrorInfo valid_max_age(std::uint_least64_t v);
+        slim::ErrorInfo set_max_age(std::string_view s);
+ 		std::optional<std::uint_least64_t> get_max_age() const { return max_age; };
 
-		slim::SlimValue set_domain(std::string_view s);
-		const std::string& get_domain() const { return domain; };
+        static slim::ErrorInfo valid_name(std::string_view s);
+        slim::ErrorInfo set_name(std::string_view s);
+        std::string_view get_name() const { return name; };
 
-		slim::SlimValue set_expires(std::string_view s);
-		const std::string& get_expires() const { return expires; };
+        static slim::ErrorInfo valid_value(std::string_view s);
+        slim::ErrorInfo set_value(std::string_view s);
+        std::string_view get_value() const { return value; };
 
-		slim::SlimValue set_same_site(std::string_view s);
-		const std::string& get_same_site() const { return same_site; };
+        static slim::ErrorInfo valid_path(std::string_view s);
+        slim::ErrorInfo set_path(std::string_view s);
+        const std::optional<std::string> get_path() const { return path; };
 
-		void set_httponly(bool b) { httponly = b; };
-		slim::SlimValue set_httponly(std::string_view s);
-		bool get_httponly() const { return httponly; };
+        static slim::ErrorInfo valid_domain(std::string_view s);
+        slim::ErrorInfo set_domain(std::string_view s);
+        const std::optional<std::string> get_domain() const { return domain; };
 
-		void set_partitioned(bool b) { partitioned = b; };
-		slim::SlimValue set_partitioned(std::string_view s);
-		bool get_partitioned() const { return partitioned; };
+        static slim::ErrorInfo valid_expires(std::string_view s);
+        slim::ErrorInfo set_expires(std::string_view s);
+        const std::optional<std::string> get_expires() const { return expires; };
 
-		void set_secure(bool b) { secure = b; };
-		slim::SlimValue set_secure(std::string_view s);
-		bool get_secure() const { return secure; };
+        static slim::ErrorInfo valid_same_site(std::string_view s);
+        slim::ErrorInfo set_same_site(std::string_view s);
+        const std::optional<std::string> get_same_site() const { return same_site; };
 
-	private:
-		max_age_t max_age{};
-		std::string name;
-		std::string value;
-		std::string path;
-		std::string domain;
-		std::string expires;
-		std::string same_site;
-		bool        httponly : 1 = false;
-		bool        partitioned : 1 = false;
-		bool        secure : 1 = false;
+        slim::ErrorInfo set_httponly(std::string_view s);
+        bool get_httponly() const { return httponly; };
+
+		static slim::ErrorInfo valid_partitioned(const bool secure, const bool partitioned);
+		slim::ErrorInfo validate_partitioned();
+        slim::ErrorInfo set_partitioned(std::string_view s);
+        bool get_partitioned() const { return partitioned; };
+
+        static slim::ErrorInfo valid_secure(std::string_view same_site, const bool secure);
+		slim::ErrorInfo validate_secure();
+        slim::ErrorInfo set_secure(std::string_view s);
+        bool get_secure() const { return secure; };
+
+        std::string serialize() const;
+
+    private:
+	    std::string                        name;
+        std::string                        value;
+        std::optional<std::string>         path;
+        std::optional<std::string>         domain;
+        std::optional<std::string>         expires;
+        std::optional<std::string>         same_site;
+        std::optional<std::uint_least64_t> max_age;
+        bool                               httponly{false};
+        bool                               partitioned{false};
+        bool                               secure{false};
 };
 
 } // slim::common::http

@@ -501,16 +501,14 @@ TEST_CASE("set_httponly bool overload sets false") {
     REQUIRE(c.get_httponly() == false);
 }
 
-TEST_CASE("set_secure bool overload sets true") {
+TEST_CASE("set_secure string_view overload sets true then false") {
     slim::common::http::Cookie c;
-    c.set_secure(true);
+    slim::SlimValue r = c.set_secure(std::string_view{"true"});
+    REQUIRE(r);
     REQUIRE(c.get_secure() == true);
-}
-
-TEST_CASE("set_secure bool overload sets false") {
-    slim::common::http::Cookie c;
-    c.set_secure(true);
-    c.set_secure(false);
+    r = c.set_secure(std::string_view{"false"});
+    REQUIRE(!r);
+    REQUIRE(!r.has_error());
     REQUIRE(c.get_secure() == false);
 }
 
