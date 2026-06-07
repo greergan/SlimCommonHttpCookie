@@ -220,13 +220,16 @@ slim::ErrorInfo slim::common::http::Cookie::set_max_age(std::string_view s) {
     if (trimmed.empty())
         return ErrorInfo{std::format("'{}' => max-age cannot be empty", s)};
 
-    auto [ptr, ec] = std::from_chars(trimmed.data(), trimmed.data() + trimmed.size(), *max_age);
+    std::uint_least64_t temp_value = 0;
+    auto [ptr, ec] = std::from_chars(trimmed.data(), trimmed.data() + trimmed.size(), temp_value);
 
     if (ec != std::errc{})
         return ErrorInfo{std::format("'{}' => invalid max-age format (expected non-negative integer)", s)};
 
     if (ptr != trimmed.data() + trimmed.size())
         return ErrorInfo{std::format("'{}' => invalid max-age format (trailing characters)", s)};
+
+    max_age = temp_value;
 
     return validate_max_age(max_age.value());
 }
