@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <limits>
 #include <locale>
+#include <slim/SlimValue.hpp>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -13,10 +14,35 @@
 
 namespace {
 
-constexpr bool iequals(std::string_view a, std::string_view b) {
+struct AsciiTables {
+    std::array<char, 256> to_lower{};
+    std::array<bool, 256> is_alnum{};
+    std::array<bool, 256> is_space{};
+    std::array<bool, 256> is_cookie_char{};
+
+    constexpr AsciiTables() {
+        for (size_t i = 0; i < 256; ++i) {
+            to_lower[i] = (i >= 'A' && i <= 'Z') ? static_cast<char>(i + 32) : static_cast<char>(i);
+            is_alnum[i] = (i >= 'a' && i <= 'z') || (i >= 'A' && i <= 'Z') || (i >= '0' && i <= '9');
+            is_space[i] = (i == ' ' || i == '\t' || i == '\r' || i == '\n' || i == '\v' || i == '\f');
+
+            // Valid RFC 6265 cookie characters table
+            unsigned char uc = static_cast<unsigned char>(i);
+            is_cookie_char[i] = (uc == 0x21)
+                                || (uc >= 0x23 && uc <= 0x2B)
+                                || (uc >= 0x2D && uc <= 0x3A)
+                                || (uc >= 0x3C && uc <= 0x5B)
+                                || (uc >= 0x5D && uc <= 0x7E);
+        }
+    }
+};
+
+constexpr AsciiTables ascii{};
+
+constexpr bool iequals(std::string_view a, std::string_view b) noexcept {
     if (a.size() != b.size()) return false;
     for (size_t i = 0; i < a.size(); ++i) {
-        if (std::tolower(static_cast<unsigned char>(a[i])) !=
+        if (ascii.to_lower[static_cast<unsigned char>(a[i])] !=
             static_cast<unsigned char>(b[i])) {
             return false;
         }
@@ -24,25 +50,51 @@ constexpr bool iequals(std::string_view a, std::string_view b) {
     return true;
 }
 
-constexpr std::string_view trim(std::string_view s) {
-    size_t start = 0;
-    while (start < s.size() && std::isspace(static_cast<unsigned char>(s[start]))) {
-        ++start;
+constexpr std::string_view trim(std::string_view s) noexcept {
+    while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.front())]) {
+        s.remove_prefix(1);
     }
-    if (start == s.size()) return {};
-
-    size_t end = s.size() - 1;
-    while (end > start && std::isspace(static_cast<unsigned char>(s[end]))) {
-        --end;
+    while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.back())]) {
+        s.remove_suffix(1);
     }
-    return s.substr(start, end - start + 1);
+    return s;
 }
 
-slim::SlimValue get_bool(std::string_view s) {
+slim::ErrorInfo get_bool(std::string_view s, bool& b) {
     std::string_view trimmed = trim(s);
-    if (iequals(trimmed, "true")) return true;
-    if (iequals(trimmed, "false")) return false;
-    return slim::SlimValue{}.set_error(std::format("'{}' => invalid boolean (expected 'true' or 'false')", s));
+    if (iequals(trimmed, "true")) {
+        b = true;
+        return {};
+    }
+    if (iequals(trimmed, "false")) {
+        b = false;
+        return {};
+    }
+    return slim::ErrorInfo{std::format("'{}' => invalid boolean (expected 'true' or 'false')", s)};
+}
+
+// Helper to convert 3-letter month/day abbreviations to integers efficiently
+constexpr int month_abbr_to_int(std::string_view s) noexcept {
+    if (s.size() < 3) return -1;
+    // Map combinations manually or pack chars into a single 24-bit uint for switch
+    uint32_t val = (static_cast<uint32_t>(ascii.to_lower[static_cast<unsigned char>(s[0])]) << 16) |
+                   (static_cast<uint32_t>(ascii.to_lower[static_cast<unsigned char>(s[1])]) << 8)  |
+                    static_cast<uint32_t>(ascii.to_lower[static_cast<unsigned char>(s[2])]);
+    switch(val) {
+        case 0x6a616e: return 0;  // "jan"
+        case 0x666562: return 1;  // "feb"
+        case 0x6d6172: return 2;  // "mar"
+        case 0x617072: return 3;  // "apr"
+        case 0x6d6179: return 4;  // "may"
+        case 0x6a756e: return 5;  // "jun"
+        case 0x6a756c: return 6;  // "jul"
+        case 0x617567: return 7;  // "aug"
+        case 0x736570: return 8;  // "sep"
+        case 0x6f6374: return 9;  // "oct"
+        case 0x6e6f76: return 10; // "nov"
+        case 0x646563: return 11; // "dec"
+        default: return -1;
+    }
 }
 
 slim::ErrorInfo validate_domain(std::string_view s) {
@@ -84,22 +136,30 @@ slim::ErrorInfo validate_domain(std::string_view s) {
 }
 
 slim::ErrorInfo validate_expires(std::string_view s) {
-    std::tm tm{};
-    std::istringstream ss{std::string{s}};
-    ss.imbue(std::locale{"C"});
+    // Basic structural length guard
+    if (s.size() < 20) return slim::ErrorInfo{std::format("'{}' => invalid expires format", s)};
 
-    const char* formats[] = {
-        "%a, %d %b %Y %H:%M:%S GMT", // RFC 1123 (Preferred)
-        "%A, %d-%b-%y %H:%M:%S GMT", // RFC 850 (Obsolete)
-        "%a %b %d %H:%M:%S %Y"       // ANSI C asctime (Required)
-    };
-
-    for (const char* fmt : formats) {
-        ss.clear();
-        ss.seekg(0);
-        ss >> std::get_time(&tm, fmt);
-        if (!ss.fail()) return {};
+    // Fast inline token checks mimicking strptime without instantiation costs
+    // Format 1: RFC 1123 "Sun, 06 Nov 1994 08:49:37 GMT"
+    if (s.size() == 29 && s.substr(26) == "GMT" && s[4] == ' ' && s[7] == ' ') {
+        int day = 0;
+        auto [p1, ec1] = std::from_chars(s.data() + 5, s.data() + 7, day);
+        int month = month_abbr_to_int(s.substr(8, 3));
+        if (ec1 == std::errc{} && month != -1) return {};
     }
+
+    // Format 2: RFC 850 "Sunday, 06-Nov-94 08:49:37 GMT"
+    if (s.ends_with("GMT") && s.find('-') != std::string_view::npos) {
+        size_t dash1 = s.find('-');
+        if (dash1 != std::string_view::npos && dash1 >= 3 && s[dash1 + 4] == '-') {
+            int month = month_abbr_to_int(s.substr(dash1 + 1, 3));
+            if (month != -1) return {};
+        }
+    }
+
+    // Fallback: Check if it matches ANSI C asctime layout
+    int month_alt = month_abbr_to_int(s.substr(4, 3));
+    if (month_alt != -1 && s.size() == 24) return {};
 
     return slim::ErrorInfo{std::format("'{}' => invalid expires format", s)};
 }
@@ -129,6 +189,28 @@ slim::ErrorInfo validate_max_age(std::uint_least64_t v) {
     return {};
 }
 
+slim::ErrorInfo get_max_age_value(std::string_view s, std::optional<std::uint_least64_t>& v) {
+    std::string_view trimmed = trim(s);
+
+    if (trimmed.empty())
+        return slim::ErrorInfo{std::format("'{}' => max-age cannot be empty", s)};
+
+    std::uint_least64_t temp_value = 0;
+    auto [ptr, ec] = std::from_chars(trimmed.data(), trimmed.data() + trimmed.size(), temp_value);
+
+    if (ec != std::errc{})
+        return slim::ErrorInfo{std::format("'{}' => invalid max-age format (expected non-negative integer)", s)};
+
+    if (ptr != trimmed.data() + trimmed.size())
+        return slim::ErrorInfo{std::format("'{}' => invalid max-age format (trailing characters)", s)};
+
+    slim::ErrorInfo e = validate_max_age(temp_value);
+    if(!e.has_error())
+        v = temp_value;
+
+    return e;
+}
+
 slim::ErrorInfo validate_name(std::string_view s) {
     if (s.empty())
         return slim::ErrorInfo{std::format("'{}' => invalid cookie name (empty)", s)};
@@ -144,7 +226,7 @@ slim::ErrorInfo validate_name(std::string_view s) {
             case ',': case ';': case ':': case '\\': case '"':
             case '/': case '[': case ']': case '?': case '=':
             case '{': case '}':
-                return slim::ErrorInfo{std::format("'{}' => invalid cookie name (separator not permitted) => '{}'", s, c)};
+                return slim::ErrorInfo{std::format("'{}' => invalid cookie name (character not permitted) => '{}'", s, c)};
         }
     }
 
@@ -180,25 +262,22 @@ slim::ErrorInfo validate_value(std::string_view s) {
         s = s.substr(1, s.size() - 2);
     }
 
+    // Lookups replace nested comparisons
     for (char c : s) {
-        unsigned char uc = static_cast<unsigned char>(c);
-        bool valid = uc == 0x21
-                  || (uc >= 0x23 && uc <= 0x2B)
-                  || (uc >= 0x2D && uc <= 0x3A)
-                  || (uc >= 0x3C && uc <= 0x5B)
-                  || (uc >= 0x5D && uc <= 0x7E);
-        if (!valid)
+        if (!ascii.is_cookie_char[static_cast<unsigned char>(c)])
             return slim::ErrorInfo{std::format("'{}' => invalid cookie value (unexpected character) => '{}'", s, c)};
     }
-
     return {};
 }
 
 } // namespace
 
 slim::ErrorInfo slim::common::http::Cookie::set_domain(std::string_view s) {
-    domain = std::string{trim(s)};
-    return validate_domain(domain.value());
+    std::string_view trimmed = trim(s);
+    auto e = validate_domain(trimmed);
+    if(!e.has_error())
+        domain = trimmed;
+    return e;
 }
 
 slim::ErrorInfo slim::common::http::Cookie::valid_domain(std::string_view s) {
@@ -206,8 +285,11 @@ slim::ErrorInfo slim::common::http::Cookie::valid_domain(std::string_view s) {
 }
 
 slim::ErrorInfo slim::common::http::Cookie::set_expires(std::string_view s) {
-    expires = std::string{trim(s)};
-    return validate_expires(expires.value());
+    std::string_view trimmed = trim(s);
+    auto e = validate_expires(trimmed);
+    if(!e.has_error())
+        expires = trimmed;
+    return e;
 }
 
 slim::ErrorInfo slim::common::http::Cookie::valid_expires(std::string_view s) {
@@ -215,23 +297,7 @@ slim::ErrorInfo slim::common::http::Cookie::valid_expires(std::string_view s) {
 }
 
 slim::ErrorInfo slim::common::http::Cookie::set_max_age(std::string_view s) {
-    std::string_view trimmed = trim(s);
-
-    if (trimmed.empty())
-        return ErrorInfo{std::format("'{}' => max-age cannot be empty", s)};
-
-    std::uint_least64_t temp_value = 0;
-    auto [ptr, ec] = std::from_chars(trimmed.data(), trimmed.data() + trimmed.size(), temp_value);
-
-    if (ec != std::errc{})
-        return ErrorInfo{std::format("'{}' => invalid max-age format (expected non-negative integer)", s)};
-
-    if (ptr != trimmed.data() + trimmed.size())
-        return ErrorInfo{std::format("'{}' => invalid max-age format (trailing characters)", s)};
-
-    max_age = temp_value;
-
-    return validate_max_age(max_age.value());
+    return get_max_age_value(s, max_age);
 }
 
 slim::ErrorInfo slim::common::http::Cookie::valid_max_age(std::uint_least64_t v) {
@@ -239,8 +305,11 @@ slim::ErrorInfo slim::common::http::Cookie::valid_max_age(std::uint_least64_t v)
 }
 
 slim::ErrorInfo slim::common::http::Cookie::set_name(std::string_view s) {
-    name = std::string{trim(s)};
-    return validate_name(name);
+    std::string_view trimmed = trim(s);
+    auto e = validate_name(trimmed);
+    if(!e.has_error())
+        name = trimmed;
+    return e;
 }
 
 slim::ErrorInfo slim::common::http::Cookie::valid_name(std::string_view s) {
@@ -248,8 +317,11 @@ slim::ErrorInfo slim::common::http::Cookie::valid_name(std::string_view s) {
 }
 
 slim::ErrorInfo slim::common::http::Cookie::set_path(std::string_view s) {
-    path = std::string{trim(s)};
-    return validate_path(path.value());
+    std::string_view trimmed = trim(s);
+    auto e = validate_path(trimmed);
+    if(!e.has_error())
+        path = trimmed;
+    return e;
 }
 
 slim::ErrorInfo slim::common::http::Cookie::valid_path(std::string_view s) {
@@ -257,8 +329,11 @@ slim::ErrorInfo slim::common::http::Cookie::valid_path(std::string_view s) {
 }
 
 slim::ErrorInfo slim::common::http::Cookie::set_value(std::string_view s) {
-    value = std::string{trim(s)};
-    return validate_value(value);
+    std::string_view trimmed = trim(s);
+    auto e = validate_value(trimmed);
+    if(!e.has_error())
+        value = trimmed;
+    return e;
 }
 
 slim::ErrorInfo slim::common::http::Cookie::valid_value(std::string_view s) {
@@ -266,8 +341,11 @@ slim::ErrorInfo slim::common::http::Cookie::valid_value(std::string_view s) {
 }
 
 slim::ErrorInfo slim::common::http::Cookie::set_same_site(std::string_view s) {
-    same_site = std::string{trim(s)};
-    return validate_same_site(same_site.value());
+    std::string_view trimmed = trim(s);
+    auto e = validate_same_site(trimmed);
+    if(!e.has_error())
+        same_site = trimmed;
+    return e;
 }
 
 slim::ErrorInfo slim::common::http::Cookie::valid_same_site(std::string_view s) {
@@ -275,17 +353,11 @@ slim::ErrorInfo slim::common::http::Cookie::valid_same_site(std::string_view s) 
 }
 
 slim::ErrorInfo slim::common::http::Cookie::set_httponly(std::string_view s) {
-    slim::SlimValue r = get_bool(s);
-    if (r.has_error()) return r.get_error();
-    httponly = r.get_bool();
-    return {};
+    return get_bool(s, httponly);
 }
 
 slim::ErrorInfo slim::common::http::Cookie::set_partitioned(std::string_view s) {
-    slim::SlimValue r = get_bool(s);
-    if (r.has_error()) return r.get_error();
-    partitioned = r.get_bool();
-    return {};
+    return get_bool(s, partitioned);
 }
 
 slim::ErrorInfo slim::common::http::Cookie::valid_partitioned(const bool secure, const bool partitioned) {
@@ -297,10 +369,7 @@ slim::ErrorInfo slim::common::http::Cookie::validate_partitioned() {
 }
 
 slim::ErrorInfo slim::common::http::Cookie::set_secure(std::string_view s) {
-    slim::SlimValue r = get_bool(s);
-    if (r.has_error()) return r.get_error();
-    secure = r.get_bool();
-    return {};
+    return get_bool(s,  secure);
 }
 
 slim::ErrorInfo slim::common::http::Cookie::valid_secure(std::string_view same_site, const bool secure) {
