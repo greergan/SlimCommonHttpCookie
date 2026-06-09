@@ -41,7 +41,6 @@ namespace COOKIE {
         PARTITIONED_REQUIRES_SECURE,
         SAMESITE_NONE_REQUIRES_SECURE,
         SAMESITE_INVALID,
-        VALUE_EMPTY,
         VALUE_UNMATCHED_QUOTE,
         VALUE_INVALID_CHAR,
 
@@ -76,7 +75,6 @@ namespace COOKIE {
             "PARTITIONED_REQUIRES_SECURE",
             "SAMESITE_NONE_REQUIRES_SECURE",
             "SAMESITE_INVALID",
-            "VALUE_EMPTY",
             "VALUE_UNMATCHED_QUOTE",
             "VALUE_INVALID_CHAR"
         };

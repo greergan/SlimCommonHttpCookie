@@ -198,7 +198,7 @@ constexpr COOKIE::STATUS validate_same_site(std::string_view s) noexcept {
 }
 
 constexpr COOKIE::STATUS validate_value(std::string_view s) noexcept {
-    if (s.empty()) return COOKIE::STATUS::VALUE_EMPTY;
+    if (s.empty()) return COOKIE::STATUS::OK;
     if (s.front() == '"') {
         if (s.size() < 2 || s.back() != '"') return COOKIE::STATUS::VALUE_UNMATCHED_QUOTE;
         s = s.substr(1, s.size() - 2);
