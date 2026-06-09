@@ -34,6 +34,9 @@ namespace COOKIE {
         MAX_AGE_TRAILING_CHARS,
         NAME_EMPTY,
         NAME_INVALID_CHAR,
+        NAME_PREFIX_REQUIRES_SECURE,
+        NAME_HOST_PREFIX_HAS_DOMAIN,
+        NAME_HOST_PREFIX_INVALID_PATH,
         PARTITIONED_REQUIRES_SECURE,
         SAMESITE_NONE_REQUIRES_SECURE,
         SAMESITE_INVALID,
@@ -69,6 +72,9 @@ namespace COOKIE {
             "MAX_AGE_TRAILING_CHARS",
             "NAME_EMPTY",
             "NAME_INVALID_CHAR",
+            "NAME_PREFIX_REQUIRES_SECURE",
+            "NAME_HOST_PREFIX_HAS_DOMAIN",
+            "NAME_HOST_PREFIX_INVALID_PATH",
             "PARTITIONED_REQUIRES_SECURE",
             "SAMESITE_NONE_REQUIRES_SECURE",
             "SAMESITE_INVALID",
@@ -143,6 +149,7 @@ class Cookie {
         COOKIE::STATUS set_secure(std::string_view s);
         bool get_secure() const { return secure; };
 
+        COOKIE::STATUS validate_prefixes() const;
         std::string serialize() const;
 
     private:

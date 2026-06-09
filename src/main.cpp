@@ -385,6 +385,40 @@ COOKIE::STATUS slim::common::http::Cookie::validate_secure() {
     return ::validate_secure(same_site.value_or(""), secure);
 }
 
+COOKIE::STATUS slim::common::http::Cookie::validate_prefixes() const {
+    if (name.empty()) {
+        return COOKIE::STATUS::NAME_EMPTY;
+    }
+
+    // Per RFC 6265bis, prefix matching is case-insensitive
+    const bool is_secure_prefix = ::istarts_with(name, "__secure-");
+    const bool is_host_prefix = ::istarts_with(name, "__host-");
+
+    if (!is_secure_prefix && !is_host_prefix) {
+        return COOKIE::STATUS::OK;
+    }
+
+    // BOTH prefixes require the 'Secure' attribute to be strictly true
+    if (!secure) {
+        return COOKIE::STATUS::NAME_PREFIX_REQUIRES_SECURE;
+    }
+
+    // The __Host- prefix has additional strict requirements
+    if (is_host_prefix) {
+        // MUST NOT contain a Domain attribute
+        if (domain.has_value() && !domain->empty()) {
+            return COOKIE::STATUS::NAME_HOST_PREFIX_HAS_DOMAIN;
+        }
+
+        // MUST contain a Path attribute set exactly to "/"
+        if (!path.has_value() || path.value() != "/") {
+            return COOKIE::STATUS::NAME_HOST_PREFIX_INVALID_PATH;
+        }
+    }
+
+    return COOKIE::STATUS::OK;
+}
+
 std::string slim::common::http::Cookie::serialize() const {
     std::ostringstream ss;
     ss << name << "=" << value;
