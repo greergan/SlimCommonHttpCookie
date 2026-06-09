@@ -7,6 +7,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <array>
 #include <slim/SlimValue.hpp>
 
 #define SLIMCOMMONHTTPCOOKIE_VERSION  "@SLIMCOMMONHTTPCOOKIE_VERSION@"
@@ -44,14 +45,11 @@ namespace COOKIE {
         VALUE_UNMATCHED_QUOTE,
         VALUE_INVALID_CHAR,
 
-        // _COUNT must remain the last element to size the array correctly
         _COUNT
     };
 
-    // Hide the lookup table in a detail namespace so it isn't accessed directly
     namespace detail {
-        // Constexpr array of string_views ensures zero runtime overhead and cache-friendly lookups
-        constexpr std::array<std::string_view, std::to_underlying(STATUS::_COUNT)> status_strings = {
+        constexpr std::array<std::string_view, static_cast<std::size_t>(STATUS::_COUNT)> status_strings = {
             "OK",
             "INVALID_BOOLEAN",
             "DOMAIN_EMPTY",
@@ -85,7 +83,7 @@ namespace COOKIE {
     }
 
     [[nodiscard]] constexpr std::string_view to_string(STATUS status) noexcept {
-        const auto index = std::to_underlying(status);
+        const auto index = static_cast<std::size_t>(status);
 
         if (index < detail::status_strings.size()) {
             return detail::status_strings[index];
@@ -99,70 +97,70 @@ namespace slim::common::http {
 
 class Cookie {
     public:
-		Cookie() = default;
-    	Cookie(const Cookie& other) = delete;
-    	Cookie& operator=(const Cookie& other) = delete;
+        Cookie() = default;
+        Cookie(const Cookie& other) = delete;
+        Cookie& operator=(const Cookie& other) = delete;
 
-    	Cookie(Cookie&& other) = default;
-    	Cookie& operator=(Cookie&& other) = default;
+        Cookie(Cookie&& other) = default;
+        Cookie& operator=(Cookie&& other) = default;
 
-		~Cookie() = default;
+        ~Cookie() = default;
 
-        static COOKIE::STATUS valid_max_age(std::uint_least64_t v);
-        COOKIE::STATUS set_max_age(std::string_view s);
- 		std::optional<std::uint_least64_t> get_max_age() const { return max_age; };
+        static COOKIE::STATUS valid_max_age(std::uint_least64_t v) noexcept;
+        COOKIE::STATUS set_max_age(std::string_view s) noexcept;
+        std::optional<std::uint_least64_t> get_max_age() const noexcept { return max_age; };
 
-        static COOKIE::STATUS valid_name(std::string_view s);
-        COOKIE::STATUS set_name(std::string_view s);
-        std::string_view get_name() const { return name; };
+        static COOKIE::STATUS valid_name(std::string_view s) noexcept;
+        COOKIE::STATUS set_name(std::string_view s) noexcept;
+        std::string_view get_name() const noexcept { return name; };
 
-        static COOKIE::STATUS valid_value(std::string_view s);
-        COOKIE::STATUS set_value(std::string_view s);
-        std::string_view get_value() const { return value; };
+        static COOKIE::STATUS valid_value(std::string_view s) noexcept;
+        COOKIE::STATUS set_value(std::string_view s) noexcept;
+        std::string_view get_value() const noexcept { return value; };
 
-        static COOKIE::STATUS valid_path(std::string_view s);
-        COOKIE::STATUS set_path(std::string_view s);
-        const std::optional<std::string> get_path() const { return path; };
+        static COOKIE::STATUS valid_path(std::string_view s) noexcept;
+        COOKIE::STATUS set_path(std::string_view s) noexcept;
+        std::optional<std::string> get_path() const noexcept { return path; };
 
-        static COOKIE::STATUS valid_domain(std::string_view s);
-        COOKIE::STATUS set_domain(std::string_view s);
-        const std::optional<std::string> get_domain() const { return domain; };
+        static COOKIE::STATUS valid_domain(std::string_view s) noexcept;
+        COOKIE::STATUS set_domain(std::string_view s) noexcept;
+        std::optional<std::string> get_domain() const noexcept { return domain; };
 
-        static COOKIE::STATUS valid_expires(std::string_view s);
-        COOKIE::STATUS set_expires(std::string_view s);
-        const std::optional<std::string> get_expires() const { return expires; };
+        static COOKIE::STATUS valid_expires(std::string_view s) noexcept;
+        COOKIE::STATUS set_expires(std::string_view s) noexcept;
+        std::optional<std::string> get_expires() const noexcept { return expires; };
 
-        static COOKIE::STATUS valid_same_site(std::string_view s);
-        COOKIE::STATUS set_same_site(std::string_view s);
-        const std::optional<std::string> get_same_site() const { return same_site; };
+        static COOKIE::STATUS valid_same_site(std::string_view s) noexcept;
+        COOKIE::STATUS set_same_site(std::string_view s) noexcept;
+        std::optional<std::string> get_same_site() const noexcept { return same_site; };
 
-        COOKIE::STATUS set_httponly(std::string_view s);
-        bool get_httponly() const { return httponly; };
+        COOKIE::STATUS set_httponly(std::string_view s) noexcept;
+        bool get_httponly() const noexcept { return httponly; };
 
-		static COOKIE::STATUS valid_partitioned(const bool secure, const bool partitioned);
-		COOKIE::STATUS validate_partitioned();
-        COOKIE::STATUS set_partitioned(std::string_view s);
-        bool get_partitioned() const { return partitioned; };
+        static COOKIE::STATUS valid_partitioned(const bool secure, const bool partitioned) noexcept;
+        COOKIE::STATUS validate_partitioned() noexcept;
+        COOKIE::STATUS set_partitioned(std::string_view s) noexcept;
+        bool get_partitioned() const noexcept { return partitioned; };
 
-        static COOKIE::STATUS valid_secure(std::string_view same_site, const bool secure);
-		COOKIE::STATUS validate_secure();
-        COOKIE::STATUS set_secure(std::string_view s);
-        bool get_secure() const { return secure; };
+        static COOKIE::STATUS valid_secure(std::string_view same_site, const bool secure) noexcept;
+        COOKIE::STATUS validate_secure() noexcept;
+        COOKIE::STATUS set_secure(std::string_view s) noexcept;
+        bool get_secure() const noexcept { return secure; };
 
-        COOKIE::STATUS validate_prefixes() const;
+        COOKIE::STATUS validate_prefixes() const noexcept;
         std::string serialize() const;
 
     private:
-	    std::string                        name;
-        std::string                        value;
-        std::optional<std::string>         path;
-        std::optional<std::string>         domain;
-        std::optional<std::string>         expires;
-        std::optional<std::string>         same_site;
+        std::string                name;
+        std::string                value;
+        std::optional<std::string> path;
+        std::optional<std::string> domain;
+        std::optional<std::string> expires;
+        std::optional<std::string> same_site;
         std::optional<std::uint_least64_t> max_age;
-        bool                               httponly{false};
-        bool                               partitioned{false};
-        bool                               secure{false};
+        bool                       httponly{false};
+        bool                       partitioned{false};
+        bool                       secure{false};
 };
 
 } // slim::common::http
