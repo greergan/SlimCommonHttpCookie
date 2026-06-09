@@ -101,8 +101,8 @@ class Cookie {
         Cookie(const Cookie& other) = delete;
         Cookie& operator=(const Cookie& other) = delete;
 
-        Cookie(Cookie&& other) = default;
-        Cookie& operator=(Cookie&& other) = default;
+        Cookie(Cookie&& other) = delete;
+        Cookie& operator=(Cookie&& other) = delete;
 
         ~Cookie() = default;
 
