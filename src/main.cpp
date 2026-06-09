@@ -49,6 +49,11 @@ constexpr bool iequals(std::string_view a, std::string_view b) noexcept {
     return true;
 }
 
+constexpr bool istarts_with(std::string_view s, std::string_view prefix) noexcept {
+    if (s.size() < prefix.size()) return false;
+    return iequals(s.substr(0, prefix.size()), prefix);
+}
+
 constexpr std::string_view trim(std::string_view s) noexcept {
     while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.front())]) {
         s.remove_prefix(1);
@@ -59,7 +64,7 @@ constexpr std::string_view trim(std::string_view s) noexcept {
     return s;
 }
 
-COOKIE::STATUS get_bool(std::string_view s, bool& b) {
+constexpr COOKIE::STATUS get_bool(std::string_view s, bool& b) noexcept {
     std::string_view trimmed = trim(s);
     if (iequals(trimmed, "true")) {
         b = true;
@@ -96,7 +101,7 @@ constexpr int month_abbr_to_int(std::string_view s) noexcept {
     }
 }
 
-COOKIE::STATUS validate_domain(std::string_view s) {
+constexpr COOKIE::STATUS validate_domain(std::string_view s) noexcept {
     if (s.empty())
         return COOKIE::STATUS::DOMAIN_EMPTY;
 
@@ -135,7 +140,7 @@ COOKIE::STATUS validate_domain(std::string_view s) {
     return COOKIE::STATUS::OK;
 }
 
-COOKIE::STATUS validate_expires(std::string_view s) {
+constexpr COOKIE::STATUS validate_expires(std::string_view s) noexcept {
     // Basic structural length guard
     if (s.size() < 20) return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
 
@@ -164,7 +169,7 @@ COOKIE::STATUS validate_expires(std::string_view s) {
     return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
 }
 
-COOKIE::STATUS validate_path(std::string_view s) {
+constexpr COOKIE::STATUS validate_path(std::string_view s) noexcept {
     if (s.empty())
         return COOKIE::STATUS::PATH_EMPTY;
 
@@ -182,14 +187,14 @@ COOKIE::STATUS validate_path(std::string_view s) {
     return COOKIE::STATUS::OK;
 }
 
-COOKIE::STATUS validate_max_age(std::uint_least64_t v) {
+constexpr COOKIE::STATUS validate_max_age(std::uint_least64_t v) noexcept {
     constexpr auto max_val = static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max());
     if (v > max_val)
         return COOKIE::STATUS::MAX_AGE_EXCEEDS_LIMIT;
     return COOKIE::STATUS::OK;
 }
 
-COOKIE::STATUS get_max_age_value(std::string_view s, std::optional<std::uint_least64_t>& v) {
+constexpr COOKIE::STATUS get_max_age_value(std::string_view s, std::optional<std::uint_least64_t>& v) noexcept {
     std::string_view trimmed = trim(s);
 
     if (trimmed.empty())
@@ -211,7 +216,7 @@ COOKIE::STATUS get_max_age_value(std::string_view s, std::optional<std::uint_lea
     return e;
 }
 
-COOKIE::STATUS validate_name(std::string_view s) {
+constexpr COOKIE::STATUS validate_name(std::string_view s) noexcept {
     if (s.empty())
         return COOKIE::STATUS::NAME_EMPTY;
 
@@ -233,26 +238,26 @@ COOKIE::STATUS validate_name(std::string_view s) {
     return COOKIE::STATUS::OK;
 }
 
-COOKIE::STATUS validate_partitioned(bool secure, bool partitioned) {
+constexpr COOKIE::STATUS validate_partitioned(bool secure, bool partitioned) noexcept {
     if (partitioned && !secure)
         return COOKIE::STATUS::PARTITIONED_REQUIRES_SECURE;
     return COOKIE::STATUS::OK;
 }
 
-COOKIE::STATUS validate_secure(std::string_view same_site, bool secure) {
+constexpr COOKIE::STATUS validate_secure(std::string_view same_site, bool secure) noexcept {
     if (iequals(same_site, "none") && !secure)
         return COOKIE::STATUS::SAMESITE_NONE_REQUIRES_SECURE;
     return COOKIE::STATUS::OK;
 }
 
-COOKIE::STATUS validate_same_site(std::string_view s) {
+constexpr COOKIE::STATUS validate_same_site(std::string_view s) noexcept {
     if (iequals(s, "strict")) return COOKIE::STATUS::OK;
     if (iequals(s, "lax"))    return COOKIE::STATUS::OK;
     if (iequals(s, "none"))   return COOKIE::STATUS::OK;
     return COOKIE::STATUS::SAMESITE_INVALID;
 }
 
-COOKIE::STATUS validate_value(std::string_view s) {
+constexpr COOKIE::STATUS validate_value(std::string_view s) noexcept {
     if (s.empty())
         return COOKIE::STATUS::VALUE_EMPTY;
 
