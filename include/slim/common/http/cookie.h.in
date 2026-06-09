@@ -5,12 +5,92 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
 #include <slim/SlimValue.hpp>
 
 #define SLIMCOMMONHTTPCOOKIE_VERSION  "@SLIMCOMMONHTTPCOOKIE_VERSION@"
 #define SLIMCOMMONHTTPCOOKIE_GIT_HASH "@SLIMCOMMONHTTPCOOKIE_GIT_HASH@"
 
+namespace COOKIE {
+    enum class STATUS : uint8_t {
+        OK = 0,
+        INVALID_BOOLEAN,
+        DOMAIN_EMPTY,
+        DOMAIN_BARE_DOT,
+        DOMAIN_TRAILING_DOT,
+        DOMAIN_TOO_LONG,
+        DOMAIN_LABEL_EMPTY,
+        DOMAIN_LABEL_TOO_LONG,
+        DOMAIN_LABEL_INVALID_HYPHEN,
+        DOMAIN_INVALID_CHAR,
+        EXPIRES_INVALID_FORMAT,
+        PATH_EMPTY,
+        PATH_MISSING_LEADING_SLASH,
+        PATH_INVALID_CHAR,
+        MAX_AGE_EXCEEDS_LIMIT,
+        MAX_AGE_EMPTY,
+        MAX_AGE_INVALID_FORMAT,
+        MAX_AGE_TRAILING_CHARS,
+        NAME_EMPTY,
+        NAME_INVALID_CHAR,
+        PARTITIONED_REQUIRES_SECURE,
+        SAMESITE_NONE_REQUIRES_SECURE,
+        SAMESITE_INVALID,
+        VALUE_EMPTY,
+        VALUE_UNMATCHED_QUOTE,
+        VALUE_INVALID_CHAR,
+
+        // _COUNT must remain the last element to size the array correctly
+        _COUNT
+    };
+
+    // Hide the lookup table in a detail namespace so it isn't accessed directly
+    namespace detail {
+        // Constexpr array of string_views ensures zero runtime overhead and cache-friendly lookups
+        constexpr std::array<std::string_view, std::to_underlying(STATUS::_COUNT)> status_strings = {
+            "OK",
+            "INVALID_BOOLEAN",
+            "DOMAIN_EMPTY",
+            "DOMAIN_BARE_DOT",
+            "DOMAIN_TRAILING_DOT",
+            "DOMAIN_TOO_LONG",
+            "DOMAIN_LABEL_EMPTY",
+            "DOMAIN_LABEL_TOO_LONG",
+            "DOMAIN_LABEL_INVALID_HYPHEN",
+            "DOMAIN_INVALID_CHAR",
+            "EXPIRES_INVALID_FORMAT",
+            "PATH_EMPTY",
+            "PATH_MISSING_LEADING_SLASH",
+            "PATH_INVALID_CHAR",
+            "MAX_AGE_EXCEEDS_LIMIT",
+            "MAX_AGE_EMPTY",
+            "MAX_AGE_INVALID_FORMAT",
+            "MAX_AGE_TRAILING_CHARS",
+            "NAME_EMPTY",
+            "NAME_INVALID_CHAR",
+            "PARTITIONED_REQUIRES_SECURE",
+            "SAMESITE_NONE_REQUIRES_SECURE",
+            "SAMESITE_INVALID",
+            "VALUE_EMPTY",
+            "VALUE_UNMATCHED_QUOTE",
+            "VALUE_INVALID_CHAR"
+        };
+    }
+
+    [[nodiscard]] constexpr std::string_view to_string(STATUS status) noexcept {
+        const auto index = std::to_underlying(status);
+
+        if (index < detail::status_strings.size()) {
+            return detail::status_strings[index];
+        }
+        return "UNKNOWN";
+    }
+
+} // namespace COOKIE
+
 namespace slim::common::http {
+
 class Cookie {
     public:
 		Cookie() = default;
@@ -22,45 +102,45 @@ class Cookie {
 
 		~Cookie() = default;
 
-        static slim::ErrorInfo valid_max_age(std::uint_least64_t v);
-        slim::ErrorInfo set_max_age(std::string_view s);
+        static COOKIE::STATUS valid_max_age(std::uint_least64_t v);
+        COOKIE::STATUS set_max_age(std::string_view s);
  		std::optional<std::uint_least64_t> get_max_age() const { return max_age; };
 
-        static slim::ErrorInfo valid_name(std::string_view s);
-        slim::ErrorInfo set_name(std::string_view s);
+        static COOKIE::STATUS valid_name(std::string_view s);
+        COOKIE::STATUS set_name(std::string_view s);
         std::string_view get_name() const { return name; };
 
-        static slim::ErrorInfo valid_value(std::string_view s);
-        slim::ErrorInfo set_value(std::string_view s);
+        static COOKIE::STATUS valid_value(std::string_view s);
+        COOKIE::STATUS set_value(std::string_view s);
         std::string_view get_value() const { return value; };
 
-        static slim::ErrorInfo valid_path(std::string_view s);
-        slim::ErrorInfo set_path(std::string_view s);
+        static COOKIE::STATUS valid_path(std::string_view s);
+        COOKIE::STATUS set_path(std::string_view s);
         const std::optional<std::string> get_path() const { return path; };
 
-        static slim::ErrorInfo valid_domain(std::string_view s);
-        slim::ErrorInfo set_domain(std::string_view s);
+        static COOKIE::STATUS valid_domain(std::string_view s);
+        COOKIE::STATUS set_domain(std::string_view s);
         const std::optional<std::string> get_domain() const { return domain; };
 
-        static slim::ErrorInfo valid_expires(std::string_view s);
-        slim::ErrorInfo set_expires(std::string_view s);
+        static COOKIE::STATUS valid_expires(std::string_view s);
+        COOKIE::STATUS set_expires(std::string_view s);
         const std::optional<std::string> get_expires() const { return expires; };
 
-        static slim::ErrorInfo valid_same_site(std::string_view s);
-        slim::ErrorInfo set_same_site(std::string_view s);
+        static COOKIE::STATUS valid_same_site(std::string_view s);
+        COOKIE::STATUS set_same_site(std::string_view s);
         const std::optional<std::string> get_same_site() const { return same_site; };
 
-        slim::ErrorInfo set_httponly(std::string_view s);
+        COOKIE::STATUS set_httponly(std::string_view s);
         bool get_httponly() const { return httponly; };
 
-		static slim::ErrorInfo valid_partitioned(const bool secure, const bool partitioned);
-		slim::ErrorInfo validate_partitioned();
-        slim::ErrorInfo set_partitioned(std::string_view s);
+		static COOKIE::STATUS valid_partitioned(const bool secure, const bool partitioned);
+		COOKIE::STATUS validate_partitioned();
+        COOKIE::STATUS set_partitioned(std::string_view s);
         bool get_partitioned() const { return partitioned; };
 
-        static slim::ErrorInfo valid_secure(std::string_view same_site, const bool secure);
-		slim::ErrorInfo validate_secure();
-        slim::ErrorInfo set_secure(std::string_view s);
+        static COOKIE::STATUS valid_secure(std::string_view same_site, const bool secure);
+		COOKIE::STATUS validate_secure();
+        COOKIE::STATUS set_secure(std::string_view s);
         bool get_secure() const { return secure; };
 
         std::string serialize() const;

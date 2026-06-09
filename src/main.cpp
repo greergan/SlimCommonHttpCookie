@@ -1,7 +1,6 @@
 #include <cctype>
 #include <charconv>
 #include <ctime>
-#include <format>
 #include <iomanip>
 #include <limits>
 #include <locale>
@@ -60,17 +59,17 @@ constexpr std::string_view trim(std::string_view s) noexcept {
     return s;
 }
 
-slim::ErrorInfo get_bool(std::string_view s, bool& b) {
+COOKIE::STATUS get_bool(std::string_view s, bool& b) {
     std::string_view trimmed = trim(s);
     if (iequals(trimmed, "true")) {
         b = true;
-        return {};
+        return COOKIE::STATUS::OK;
     }
     if (iequals(trimmed, "false")) {
         b = false;
-        return {};
+        return COOKIE::STATUS::OK;
     }
-    return slim::ErrorInfo{std::format("'{}' => invalid boolean (expected 'true' or 'false')", s)};
+    return COOKIE::STATUS::INVALID_BOOLEAN;
 }
 
 // Helper to convert 3-letter month/day abbreviations to integers efficiently
@@ -97,20 +96,20 @@ constexpr int month_abbr_to_int(std::string_view s) noexcept {
     }
 }
 
-slim::ErrorInfo validate_domain(std::string_view s) {
+COOKIE::STATUS validate_domain(std::string_view s) {
     if (s.empty())
-        return slim::ErrorInfo{std::format("'{}' => invalid domain (empty)", s)};
+        return COOKIE::STATUS::DOMAIN_EMPTY;
 
     if (s.front() == '.') s.remove_prefix(1);
 
     if (s.empty())
-        return slim::ErrorInfo{std::format("'{}' => invalid domain (bare dot)", s)};
+        return COOKIE::STATUS::DOMAIN_BARE_DOT;
 
     if (s.back() == '.')
-        return slim::ErrorInfo{std::format("'{}' => invalid domain (trailing dot)", s)};
+        return COOKIE::STATUS::DOMAIN_TRAILING_DOT;
 
     if (s.size() > 253)
-        return slim::ErrorInfo{std::format("'{}' => invalid domain (exceeds 253 character limit)", s)};
+        return COOKIE::STATUS::DOMAIN_TOO_LONG;
 
     size_t label_start = 0;
     for (size_t i = 0; i <= s.size(); ++i) {
@@ -118,26 +117,27 @@ slim::ErrorInfo validate_domain(std::string_view s) {
             std::string_view label = s.substr(label_start, i - label_start);
 
             if (label.empty())
-                return slim::ErrorInfo{std::format("'{}' => invalid domain (empty label)", s)};
+                return COOKIE::STATUS::DOMAIN_LABEL_EMPTY;
             if (label.size() > 63)
-                return slim::ErrorInfo{std::format("'{}' => invalid domain label (exceeds 63 character limit)", s)};
+                return COOKIE::STATUS::DOMAIN_LABEL_TOO_LONG;
             if (label.front() == '-' || label.back() == '-')
-                return slim::ErrorInfo{std::format("'{}' => invalid domain label (cannot start or end with hyphen)", s)};
+                return COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN;
 
             for (char c : label) {
-                if (!std::isalnum(static_cast<unsigned char>(c)) && c != '-')
-                    return slim::ErrorInfo{std::format("'{}' => invalid domain label (unexpected character) => '{}'", s, c)};
+                //if (!ascii.is_alnum[static_cast<unsigned char>(c)] && c != '-')
+                if (!ascii.is_alnum[static_cast<unsigned char>(c)] && c != '-')
+                    return COOKIE::STATUS::DOMAIN_INVALID_CHAR;
             }
             label_start = i + 1;
         }
     }
 
-    return {};
+    return COOKIE::STATUS::OK;
 }
 
-slim::ErrorInfo validate_expires(std::string_view s) {
+COOKIE::STATUS validate_expires(std::string_view s) {
     // Basic structural length guard
-    if (s.size() < 20) return slim::ErrorInfo{std::format("'{}' => invalid expires format", s)};
+    if (s.size() < 20) return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
 
     // Fast inline token checks mimicking strptime without instantiation costs
     // Format 1: RFC 1123 "Sun, 06 Nov 1994 08:49:37 GMT"
@@ -145,7 +145,7 @@ slim::ErrorInfo validate_expires(std::string_view s) {
         int day = 0;
         auto [p1, ec1] = std::from_chars(s.data() + 5, s.data() + 7, day);
         int month = month_abbr_to_int(s.substr(8, 3));
-        if (ec1 == std::errc{} && month != -1) return {};
+        if (ec1 == std::errc{} && month != -1) return COOKIE::STATUS::OK;
     }
 
     // Format 2: RFC 850 "Sunday, 06-Nov-94 08:49:37 GMT"
@@ -153,230 +153,230 @@ slim::ErrorInfo validate_expires(std::string_view s) {
         size_t dash1 = s.find('-');
         if (dash1 != std::string_view::npos && dash1 >= 3 && s[dash1 + 4] == '-') {
             int month = month_abbr_to_int(s.substr(dash1 + 1, 3));
-            if (month != -1) return {};
+            if (month != -1) return COOKIE::STATUS::OK;
         }
     }
 
     // Fallback: Check if it matches ANSI C asctime layout
     int month_alt = month_abbr_to_int(s.substr(4, 3));
-    if (month_alt != -1 && s.size() == 24) return {};
+    if (month_alt != -1 && s.size() == 24) return COOKIE::STATUS::OK;
 
-    return slim::ErrorInfo{std::format("'{}' => invalid expires format", s)};
+    return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
 }
 
-slim::ErrorInfo validate_path(std::string_view s) {
+COOKIE::STATUS validate_path(std::string_view s) {
     if (s.empty())
-        return slim::ErrorInfo{std::format("'{}' => invalid path (empty)", s)};
+        return COOKIE::STATUS::PATH_EMPTY;
 
     if (s.front() != '/')
-        return slim::ErrorInfo{std::format("'{}' => invalid path (must begin with '/')", s)};
+        return COOKIE::STATUS::PATH_MISSING_LEADING_SLASH;
 
     for (char c : s) {
         unsigned char uc = static_cast<unsigned char>(c);
         if (uc <= 0x1F || uc == 0x7F)
-            return slim::ErrorInfo{std::format("'{}' => invalid path (control character)", s)};
+            return COOKIE::STATUS::PATH_INVALID_CHAR;
         if (c == ';')
-            return slim::ErrorInfo{std::format("'{}' => invalid path (semicolon not permitted)", s)};
+            return COOKIE::STATUS::PATH_INVALID_CHAR;
     }
 
-    return {};
+    return COOKIE::STATUS::OK;
 }
 
-slim::ErrorInfo validate_max_age(std::uint_least64_t v) {
+COOKIE::STATUS validate_max_age(std::uint_least64_t v) {
     constexpr auto max_val = static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max());
     if (v > max_val)
-        return slim::ErrorInfo{std::format("'{}' => max-age exceeds maximum time_t limit", v)};
-    return {};
+        return COOKIE::STATUS::MAX_AGE_EXCEEDS_LIMIT;
+    return COOKIE::STATUS::OK;
 }
 
-slim::ErrorInfo get_max_age_value(std::string_view s, std::optional<std::uint_least64_t>& v) {
+COOKIE::STATUS get_max_age_value(std::string_view s, std::optional<std::uint_least64_t>& v) {
     std::string_view trimmed = trim(s);
 
     if (trimmed.empty())
-        return slim::ErrorInfo{std::format("'{}' => max-age cannot be empty", s)};
+        return COOKIE::STATUS::MAX_AGE_EMPTY;
 
     std::uint_least64_t temp_value = 0;
     auto [ptr, ec] = std::from_chars(trimmed.data(), trimmed.data() + trimmed.size(), temp_value);
 
     if (ec != std::errc{})
-        return slim::ErrorInfo{std::format("'{}' => invalid max-age format (expected non-negative integer)", s)};
+        return COOKIE::STATUS::MAX_AGE_INVALID_FORMAT;
 
     if (ptr != trimmed.data() + trimmed.size())
-        return slim::ErrorInfo{std::format("'{}' => invalid max-age format (trailing characters)", s)};
+        return COOKIE::STATUS::MAX_AGE_TRAILING_CHARS;
 
-    slim::ErrorInfo e = validate_max_age(temp_value);
-    if(!e.has_error())
+    COOKIE::STATUS e = validate_max_age(temp_value);
+    if(e == COOKIE::STATUS::OK)
         v = temp_value;
 
     return e;
 }
 
-slim::ErrorInfo validate_name(std::string_view s) {
+COOKIE::STATUS validate_name(std::string_view s) {
     if (s.empty())
-        return slim::ErrorInfo{std::format("'{}' => invalid cookie name (empty)", s)};
+        return COOKIE::STATUS::NAME_EMPTY;
 
     for (char c : s) {
         unsigned char uc = static_cast<unsigned char>(c);
 
         if (uc <= 0x20 || uc >= 0x7F)
-            return slim::ErrorInfo{std::format("'{}' => invalid cookie name (control character or whitespace)", s)};
+            return COOKIE::STATUS::NAME_INVALID_CHAR;
 
         switch (c) {
             case '(': case ')': case '<': case '>': case '@':
             case ',': case ';': case ':': case '\\': case '"':
             case '/': case '[': case ']': case '?': case '=':
             case '{': case '}':
-                return slim::ErrorInfo{std::format("'{}' => invalid cookie name (character not permitted) => '{}'", s, c)};
+                return COOKIE::STATUS::NAME_INVALID_CHAR;
         }
     }
 
-    return {};
+    return COOKIE::STATUS::OK;
 }
 
-slim::ErrorInfo validate_partitioned(bool secure, bool partitioned) {
+COOKIE::STATUS validate_partitioned(bool secure, bool partitioned) {
     if (partitioned && !secure)
-        return slim::ErrorInfo{"Partitioned requires Secure=true"};
-    return {};
+        return COOKIE::STATUS::PARTITIONED_REQUIRES_SECURE;
+    return COOKIE::STATUS::OK;
 }
 
-slim::ErrorInfo validate_secure(std::string_view same_site, bool secure) {
+COOKIE::STATUS validate_secure(std::string_view same_site, bool secure) {
     if (iequals(same_site, "none") && !secure)
-        return slim::ErrorInfo{"SameSite=None requires Secure=true"};
-    return {};
+        return COOKIE::STATUS::SAMESITE_NONE_REQUIRES_SECURE;
+    return COOKIE::STATUS::OK;
 }
 
-slim::ErrorInfo validate_same_site(std::string_view s) {
-    if (iequals(s, "strict")) return {};
-    if (iequals(s, "lax"))    return {};
-    if (iequals(s, "none"))   return {};
-    return slim::ErrorInfo{std::format("'{}' => invalid same-site value (expected 'strict', 'lax', or 'none')", s)};
+COOKIE::STATUS validate_same_site(std::string_view s) {
+    if (iequals(s, "strict")) return COOKIE::STATUS::OK;
+    if (iequals(s, "lax"))    return COOKIE::STATUS::OK;
+    if (iequals(s, "none"))   return COOKIE::STATUS::OK;
+    return COOKIE::STATUS::SAMESITE_INVALID;
 }
 
-slim::ErrorInfo validate_value(std::string_view s) {
+COOKIE::STATUS validate_value(std::string_view s) {
     if (s.empty())
-        return slim::ErrorInfo{std::format("'{}' => invalid cookie value (empty)", s)};
+        return COOKIE::STATUS::VALUE_EMPTY;
 
     if (s.front() == '"') {
         if (s.size() < 2 || s.back() != '"')
-            return slim::ErrorInfo{std::format("'{}' => invalid cookie value (unmatched double quote)", s)};
+            return COOKIE::STATUS::VALUE_UNMATCHED_QUOTE;
         s = s.substr(1, s.size() - 2);
     }
 
     // Lookups replace nested comparisons
     for (char c : s) {
         if (!ascii.is_cookie_char[static_cast<unsigned char>(c)])
-            return slim::ErrorInfo{std::format("'{}' => invalid cookie value (unexpected character) => '{}'", s, c)};
+            return COOKIE::STATUS::VALUE_INVALID_CHAR;
     }
-    return {};
+    return COOKIE::STATUS::OK;
 }
 
 } // namespace
 
-slim::ErrorInfo slim::common::http::Cookie::set_domain(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_domain(std::string_view s) {
     std::string_view trimmed = trim(s);
     auto e = validate_domain(trimmed);
-    if(!e.has_error())
+    if(e == COOKIE::STATUS::OK)
         domain = trimmed;
     return e;
 }
 
-slim::ErrorInfo slim::common::http::Cookie::valid_domain(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::valid_domain(std::string_view s) {
     return validate_domain(trim(s));
 }
 
-slim::ErrorInfo slim::common::http::Cookie::set_expires(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_expires(std::string_view s) {
     std::string_view trimmed = trim(s);
     auto e = validate_expires(trimmed);
-    if(!e.has_error())
+    if(e == COOKIE::STATUS::OK)
         expires = trimmed;
     return e;
 }
 
-slim::ErrorInfo slim::common::http::Cookie::valid_expires(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::valid_expires(std::string_view s) {
     return validate_expires(trim(s));
 }
 
-slim::ErrorInfo slim::common::http::Cookie::set_max_age(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_max_age(std::string_view s) {
     return get_max_age_value(s, max_age);
 }
 
-slim::ErrorInfo slim::common::http::Cookie::valid_max_age(std::uint_least64_t v) {
+COOKIE::STATUS slim::common::http::Cookie::valid_max_age(std::uint_least64_t v) {
     return validate_max_age(v);
 }
 
-slim::ErrorInfo slim::common::http::Cookie::set_name(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_name(std::string_view s) {
     std::string_view trimmed = trim(s);
     auto e = validate_name(trimmed);
-    if(!e.has_error())
+    if(e == COOKIE::STATUS::OK)
         name = trimmed;
     return e;
 }
 
-slim::ErrorInfo slim::common::http::Cookie::valid_name(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::valid_name(std::string_view s) {
     return validate_name(trim(s));
 }
 
-slim::ErrorInfo slim::common::http::Cookie::set_path(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_path(std::string_view s) {
     std::string_view trimmed = trim(s);
     auto e = validate_path(trimmed);
-    if(!e.has_error())
+    if(e == COOKIE::STATUS::OK)
         path = trimmed;
     return e;
 }
 
-slim::ErrorInfo slim::common::http::Cookie::valid_path(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::valid_path(std::string_view s) {
     return validate_path(trim(s));
 }
 
-slim::ErrorInfo slim::common::http::Cookie::set_value(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_value(std::string_view s) {
     std::string_view trimmed = trim(s);
     auto e = validate_value(trimmed);
-    if(!e.has_error())
+    if(e == COOKIE::STATUS::OK)
         value = trimmed;
     return e;
 }
 
-slim::ErrorInfo slim::common::http::Cookie::valid_value(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::valid_value(std::string_view s) {
     return validate_value(trim(s));
 }
 
-slim::ErrorInfo slim::common::http::Cookie::set_same_site(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_same_site(std::string_view s) {
     std::string_view trimmed = trim(s);
     auto e = validate_same_site(trimmed);
-    if(!e.has_error())
+    if(e == COOKIE::STATUS::OK)
         same_site = trimmed;
     return e;
 }
 
-slim::ErrorInfo slim::common::http::Cookie::valid_same_site(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::valid_same_site(std::string_view s) {
     return validate_same_site(trim(s));
 }
 
-slim::ErrorInfo slim::common::http::Cookie::set_httponly(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_httponly(std::string_view s) {
     return get_bool(s, httponly);
 }
 
-slim::ErrorInfo slim::common::http::Cookie::set_partitioned(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_partitioned(std::string_view s) {
     return get_bool(s, partitioned);
 }
 
-slim::ErrorInfo slim::common::http::Cookie::valid_partitioned(const bool secure, const bool partitioned) {
+COOKIE::STATUS slim::common::http::Cookie::valid_partitioned(const bool secure, const bool partitioned) {
     return ::validate_partitioned(secure, partitioned);
 }
 
-slim::ErrorInfo slim::common::http::Cookie::validate_partitioned() {
+COOKIE::STATUS slim::common::http::Cookie::validate_partitioned() {
     return ::validate_partitioned(secure, partitioned);
 }
 
-slim::ErrorInfo slim::common::http::Cookie::set_secure(std::string_view s) {
+COOKIE::STATUS slim::common::http::Cookie::set_secure(std::string_view s) {
     return get_bool(s,  secure);
 }
 
-slim::ErrorInfo slim::common::http::Cookie::valid_secure(std::string_view same_site, const bool secure) {
+COOKIE::STATUS slim::common::http::Cookie::valid_secure(std::string_view same_site, const bool secure) {
     return ::validate_secure(trim(same_site), secure);
 }
 
-slim::ErrorInfo slim::common::http::Cookie::validate_secure() {
+COOKIE::STATUS slim::common::http::Cookie::validate_secure() {
     return ::validate_secure(same_site.value_or(""), secure);
 }
 
