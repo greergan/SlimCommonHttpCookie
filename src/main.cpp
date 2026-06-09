@@ -138,7 +138,7 @@ constexpr COOKIE::STATUS validate_expires(std::string_view s) noexcept {
 }
 
 constexpr COOKIE::STATUS validate_path(std::string_view s) noexcept {
-    if (s.empty()) return COOKIE::STATUS::PATH_EMPTY;
+    if (s.empty()) return COOKIE::STATUS::OK;
     if (s.front() != '/') return COOKIE::STATUS::PATH_MISSING_LEADING_SLASH;
     for (char c : s) {
         unsigned char uc = static_cast<unsigned char>(c);

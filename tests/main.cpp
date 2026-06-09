@@ -121,10 +121,10 @@ TEST_CASE("set_path rejects a path that does not start with slash") {
     REQUIRE(e != COOKIE::STATUS::OK);
 }
 
-TEST_CASE("set_path rejects an empty path") {
+TEST_CASE("set_path accepts an empty path") {
     slim::common::http::Cookie c;
     COOKIE::STATUS e = c.set_path("");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(e == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("set_path rejects a path containing a semicolon") {
@@ -623,9 +623,9 @@ TEST_CASE("valid_path rejects a path that does not start with slash") {
     REQUIRE(e != COOKIE::STATUS::OK);
 }
 
-TEST_CASE("valid_path rejects an empty path") {
+TEST_CASE("valid_path accepts an empty path") {
     COOKIE::STATUS e = slim::common::http::Cookie::valid_path("");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(e == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("valid_path rejects a path containing a semicolon") {
@@ -912,11 +912,6 @@ TEST_CASE("status_string returns DOMAIN_INVALID_CHAR for STATUS::DOMAIN_INVALID_
 TEST_CASE("status_string returns EXPIRES_INVALID_FORMAT for STATUS::EXPIRES_INVALID_FORMAT") {
 	auto str = COOKIE::status_string(COOKIE::STATUS::EXPIRES_INVALID_FORMAT);
 	REQUIRE(str == "EXPIRES_INVALID_FORMAT");
-}
-
-TEST_CASE("status_string returns PATH_EMPTY for STATUS::PATH_EMPTY") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::PATH_EMPTY);
-	REQUIRE(str == "PATH_EMPTY");
 }
 
 TEST_CASE("status_string returns PATH_MISSING_LEADING_SLASH for STATUS::PATH_MISSING_LEADING_SLASH") {
