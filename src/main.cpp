@@ -18,6 +18,7 @@ struct AsciiTables {
     std::array<bool, 256> is_alnum{};
     std::array<bool, 256> is_space{};
     std::array<bool, 256> is_cookie_char{};
+    std::array<bool, 256> is_date_delimiter{};
 
     constexpr AsciiTables() noexcept {
         for (size_t i = 0; i < 256; ++i) {
@@ -31,6 +32,13 @@ struct AsciiTables {
                                 || (uc >= 0x2D && uc <= 0x3A)
                                 || (uc >= 0x3C && uc <= 0x5B)
                                 || (uc >= 0x5D && uc <= 0x7E);
+
+            // RFC 6265 §5.1.1: delimiter = %x09 / %x20-2F / %x3B-40 / %x5B-60 / %x7B-7E
+            is_date_delimiter[i] = (i == 0x09)
+                            || (i >= 0x20 && i <= 0x2F)
+                            || (i >= 0x3B && i <= 0x40)
+                            || (i >= 0x5B && i <= 0x60)
+                            || (i >= 0x7B && i <= 0x7E);
         }
     }
 };
@@ -119,22 +127,135 @@ constexpr COOKIE::STATUS validate_domain(std::string_view s) noexcept {
 }
 
 constexpr COOKIE::STATUS validate_expires(std::string_view s) noexcept {
-    if (s.size() < 20) return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
-    if (s.size() == 29 && s.substr(26) == "GMT" && s[4] == ' ' && s[7] == ' ') {
-        int day = 0;
-        auto [p1, ec1] = std::from_chars(s.data() + 5, s.data() + 7, day);
-        int month = month_abbr_to_int(s.substr(8, 3));
-        if (ec1 == std::errc{} && month != -1) return COOKIE::STATUS::OK;
-    }
-    if (s.ends_with("GMT") && s.find('-') != std::string_view::npos) {
-        size_t dash1 = s.find('-');
-        if (dash1 != std::string_view::npos && dash1 >= 3 && s[dash1 + 4] == '-') {
-            int month = month_abbr_to_int(s.substr(dash1 + 1, 3));
-            if (month != -1) return COOKIE::STATUS::OK;
-        }
-    }
-    if (month_abbr_to_int(s.substr(4, 3)) != -1 && s.size() == 24) return COOKIE::STATUS::OK;
-    return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
+	// RFC 6265 §5.1.1 cookie-date algorithm.
+	// Tokenises on the RFC delimiter set; tries each token as
+	// time → day-of-month → month → year (first-match semantics,
+	// one slot per field type); then validates all ranges.
+
+	bool found_time  = false, found_dom  = false;
+	bool found_month = false, found_year = false;
+	int  hour = 0, minute = 0, second = 0;
+	int  day  = 0, year   = 0;
+
+	std::size_t pos = 0;
+
+	while (pos < s.size()) {
+		// ── skip delimiters ────────────────────────────────────────
+		while (pos < s.size() && ascii.is_date_delimiter[static_cast<unsigned char>(s[pos])]) ++pos;
+		if (pos >= s.size()) break;
+
+		// ── scan one token and extract fields ──────────────────────
+		const std::size_t tok_start = pos;
+		while (pos < s.size() && !ascii.is_date_delimiter[static_cast<unsigned char>(s[pos])])	++pos;
+		const std::size_t len = pos - tok_start;
+
+		// 1) time = 2DIGIT ':' 2DIGIT ':' 2DIGIT [*OCTET]
+		if (!found_time && len >= 8) {
+			const auto h0 = static_cast<unsigned char>(s[tok_start + 0]);
+			const auto h1 = static_cast<unsigned char>(s[tok_start + 1]);
+			const auto m0 = static_cast<unsigned char>(s[tok_start + 3]);
+			const auto m1 = static_cast<unsigned char>(s[tok_start + 4]);
+			const auto s0 = static_cast<unsigned char>(s[tok_start + 6]);
+			const auto s1 = static_cast<unsigned char>(s[tok_start + 7]);
+			if (s[tok_start + 2] == ':' && s[tok_start + 5] == ':' &&
+			    h0 >= '0' && h0 <= '9' && h1 >= '0' && h1 <= '9' &&
+			    m0 >= '0' && m0 <= '9' && m1 >= '0' && m1 <= '9' &&
+			    s0 >= '0' && s0 <= '9' && s1 >= '0' && s1 <= '9') {
+				hour   = (h0 - '0') * 10 + (h1 - '0');
+				minute = (m0 - '0') * 10 + (m1 - '0');
+				second = (s0 - '0') * 10 + (s1 - '0');
+				found_time = true;
+				if (found_dom & found_month & found_year) break;   // all done
+				continue;
+			}
+		}
+
+		// 2) day-of-month = 1*2DIGIT *( non-digit *OCTET )
+		if (!found_dom) {
+			const auto d0 = static_cast<unsigned char>(s[tok_start]);
+			if (d0 >= '0' && d0 <= '9') {
+				int d;
+				bool valid_dom;
+				if (len >= 2) {
+					const auto d1 =
+						static_cast<unsigned char>(s[tok_start + 1]);
+					if (d1 >= '0' && d1 <= '9') {
+						// two leading digits — valid only if third
+						// char (if any) is non-digit
+						const auto d2 = len > 2 ?
+							static_cast<unsigned char>(
+								s[tok_start + 2]) : 0u;
+						d = (d0 - '0') * 10 + (d1 - '0');
+						valid_dom = (len == 2 || d2 < '0' ||
+							d2 > '9');
+					} else {
+						// digit immediately followed by
+						// non-digit: e.g. "1st"
+						d = d0 - '0';
+						valid_dom = true;
+					}
+				} else {
+					// len == 1: bare single digit
+					d = d0 - '0';
+					valid_dom = true;
+				}
+				if (valid_dom) {
+					day = d;
+					found_dom = true;
+					if (found_time & found_month & found_year) break;
+					continue;
+				}
+			}
+		}
+
+		// 3) month = ( "jan" | "feb" | … ) [*OCTET]
+		if (!found_month && len >= 3) {
+			const int m = month_abbr_to_int(s.substr(tok_start, len));
+			if (m != -1) {
+				found_month = true;
+				if (found_time & found_dom & found_year) break;
+				continue;
+			}
+		}
+
+		// 4) year = 2DIGIT [2DIGIT] *OCTET
+		if (!found_year && len >= 2) {
+			const auto y0 = static_cast<unsigned char>(s[tok_start]);
+			const auto y1 = static_cast<unsigned char>(s[tok_start + 1]);
+			if (y0 >= '0' && y0 <= '9' && y1 >= '0' && y1 <= '9') {
+				year = (y0 - '0') * 10 + (y1 - '0');
+				if (len >= 4) {
+					const auto y2 = static_cast<unsigned char>(s[tok_start + 2]);
+					const auto y3 =	static_cast<unsigned char>(s[tok_start + 3]);
+					if (y2 >= '0' && y2 <= '9' && y3 >= '0' && y3 <= '9')
+						year = year * 100 + (y2 - '0') * 10 + (y3 - '0');
+				}
+				found_year = true;
+				if (found_time & found_dom & found_month) break;
+				continue;
+			}
+		}
+		// unrecognised token – ignored per RFC
+	}
+
+	// ── all four fields mandatory ───────────────────────────────────
+	if (!found_time | !found_dom | !found_month | !found_year)
+		return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
+
+	// ── two-digit year expansion (§5.1.1 steps 6–7) ────────────────
+	if (year <= 99)
+		year += (year >= 70) ? 1900 : 2000;
+
+	// ── range checks (§5.1.1 steps 8–13) ───────────────────────────
+	if (   year   < 1601          // step 8
+	    || day    < 1  || day    > 31   // step 10
+	    || hour        > 23             // step 11
+	    || minute      > 59             // step 12
+	    || second      > 59)            // step 13
+		return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
+	// month is always 1-12 by construction (month_abbr_to_int guarantees it)
+
+	return COOKIE::STATUS::OK;
 }
 
 constexpr COOKIE::STATUS validate_path(std::string_view s) noexcept {

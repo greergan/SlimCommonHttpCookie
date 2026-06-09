@@ -1031,3 +1031,268 @@ TEST_CASE("status_string noexcept") {
 	static_assert(noexcept(COOKIE::status_string(COOKIE::STATUS::OK)));
 	REQUIRE(true);
 }
+
+// ---------------------------------------------------------------------------
+// valid_expires / set_expires – RFC 6265 §5.1.1 compliance
+// ---------------------------------------------------------------------------
+
+// ── field-order independence ───────────────────────────────────────────────
+// RFC 6265 §5.1.1 tokenises the string and matches each field type
+// independently; any permutation of time, day-of-month, month and year
+// must be accepted.
+
+TEST_CASE("valid_expires accepts date fields in any order: time first") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("00:00:00 01 Jan 2099");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts date fields in any order: year first") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("2099 Jan 01 00:00:00");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts date fields in any order: month first") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Jan 01 2099 00:00:00");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts date fields in any order: day first") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01 Jan 2099 00:00:00");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+// ── unrecognised tokens are silently skipped ───────────────────────────────
+// RFC 6265 §5.1.1: tokens that match none of the four field grammars are
+// ignored; they must not cause rejection.
+
+TEST_CASE("valid_expires ignores an unrecognised weekday token") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("BADDAY 01 Jan 2099 00:00:00");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires ignores extra tokens appearing after all required fields") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:00 GMT EXTRATOKEN");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires ignores a spurious numeric token once year is already matched") {
+    // "42" cannot fill any remaining slot; it must not cause rejection.
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01 Jan 2099 00:00:00 42");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+// ── first-match semantics ──────────────────────────────────────────────────
+// RFC 6265 §5.1.1: each field slot is filled by the first token that
+// matches its grammar; later matching tokens for an already-filled slot
+// are silently ignored and must not cause rejection.
+
+TEST_CASE("valid_expires applies first-match semantics: duplicate time token is ignored") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:00 12:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires applies first-match semantics: duplicate month token is ignored") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01 Jan Feb 2099 00:00:00");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires applies first-match semantics: duplicate year token is ignored") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:00 2100 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+// ── two-digit year expansion (§5.1.1 steps 6–7) ───────────────────────────
+// Years 70–99 map to 1970–1999; years 00–69 map to 2000–2069.
+// All expanded values are ≥ 1601 and therefore valid.
+
+TEST_CASE("valid_expires expands two-digit year 70 to 1970") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 70 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires expands two-digit year 99 to 1999") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 99 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires expands two-digit year 69 to 2069") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 69 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires expands two-digit year 00 to 2000") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 00 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+// ── time component range validation (§5.1.1 steps 11–13) ─────────────────
+
+TEST_CASE("valid_expires rejects hour value 24") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 24:00:00 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts hour boundary value 23") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 23:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires rejects minute value 60") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:60:00 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts minute boundary value 59") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:59:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires rejects second value 60") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:60 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts second boundary value 59") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:59 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts maximum time field values 23:59:59") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 31 Dec 2099 23:59:59 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+// ── day-of-month range validation (§5.1.1 step 10) ───────────────────────
+
+TEST_CASE("valid_expires rejects day-of-month value 0") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 00 Jan 2099 00:00:00 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires rejects day-of-month value 32") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 32 Jan 2099 00:00:00 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts day-of-month lower boundary 1") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts day-of-month upper boundary 31") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 31 Jan 2099 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+// ── year lower-bound validation (§5.1.1 step 8) ───────────────────────────
+
+TEST_CASE("valid_expires rejects four-digit year 1600") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 1600 00:00:00 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts four-digit year boundary 1601") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 1601 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+// ── missing required fields ────────────────────────────────────────────────
+// All four field types (time, day-of-month, month, year) are mandatory;
+// absence of any one must result in rejection.
+
+TEST_CASE("valid_expires rejects a date string missing the time component") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires rejects a date string missing the day-of-month component") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, Jan 2099 00:00:00 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires rejects a date string missing the month component") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 2099 00:00:00 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires rejects a date string missing the year component") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 00:00:00 GMT");
+    REQUIRE(e != COOKIE::STATUS::OK);
+}
+
+// ── RFC 6265 §5.1.1 delimiter set ─────────────────────────────────────────
+// delimiter = %x09 / %x20-2F / %x3B-40 / %x5B-60 / %x7B-7E
+// Any character in this set is a valid token separator.
+
+TEST_CASE("valid_expires accepts horizontal tab (0x09) as a token delimiter") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01\tJan\t2099\t00:00:00");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts comma (0x2C) as a token delimiter") {
+    // ',' is in the range 0x20–2F and therefore a delimiter, not part of any token.
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01,Jan,2099,00:00:00");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts slash (0x2F) as a token delimiter") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01/Jan/2099 00:00:00");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts mixed RFC 6265 delimiter characters") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu;\t01[Jan{2099}00:00:00");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+// ── month abbreviation case-insensitivity ─────────────────────────────────
+// RFC 6265 §5.1.1: month matching is case-insensitive.
+
+TEST_CASE("valid_expires accepts a lowercase month abbreviation") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 jan 2099 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts an uppercase month abbreviation") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 JAN 2099 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts a mixed-case month abbreviation") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 jAn 2099 00:00:00 GMT");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts all twelve month abbreviations") {
+    static constexpr std::array<std::string_view, 12> months = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    };
+    for (auto m : months) {
+        std::string s = "Thu, 15 " + std::string(m) + " 2099 00:00:00 GMT";
+        REQUIRE(slim::common::http::Cookie::valid_expires(s) == COOKIE::STATUS::OK);
+    }
+}
+
+// ── single-digit day-of-month (§5.1.1: 1*2DIGIT) ─────────────────────────
+// The RFC grammar allows 1 OR 2 leading digits for day-of-month.
+// asctime-style dates space-pad single-digit days, producing a lone "1"–"9"
+// token after the double-space delimiter sequence.
+
+TEST_CASE("valid_expires accepts asctime date with single-digit day and double leading space") {
+    // Double space means the day token is the single character "1".
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu Jan  1 00:00:00 2099");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid_expires accepts asctime date with single-digit day and single leading space") {
+    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu Jan 9 00:00:00 2099");
+    REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("set_expires stores a valid asctime date with a single-digit day") {
+    slim::common::http::Cookie c;
+    COOKIE::STATUS e = c.set_expires("Thu Jan  1 12:30:00 2099");
+    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(c.get_expires() == "Thu Jan  1 12:30:00 2099");
+}
