@@ -14,7 +14,7 @@
 #define SLIMCOMMONHTTPCOOKIE_GIT_HASH "@SLIMCOMMONHTTPCOOKIE_GIT_HASH@"
 
 namespace COOKIE {
-    enum class STATUS : uint8_t {
+    enum struct STATUS : uint8_t {
         OK = 0,
         INVALID_BOOLEAN,
         DOMAIN_EMPTY,
@@ -82,7 +82,7 @@ namespace COOKIE {
         };
     }
 
-    [[nodiscard]] constexpr std::string_view to_string(STATUS status) noexcept {
+    [[nodiscard]] constexpr std::string_view status_string(STATUS status) noexcept {
         const auto index = static_cast<std::size_t>(status);
 
         if (index < detail::status_strings.size()) {
