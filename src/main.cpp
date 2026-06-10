@@ -426,10 +426,6 @@ COOKIE::STATUS slim::common::http::Cookie::set_secure(std::string_view s) noexce
     return get_bool(s, secure);
 }
 
-COOKIE::STATUS slim::common::http::Cookie::validate_secure() noexcept {
-    return ::validate_secure(same_site.value_or(""), secure);
-}
-
 std::string slim::common::http::Cookie::serialize() const {
     std::ostringstream ss;
     ss << name << "=" << value;
