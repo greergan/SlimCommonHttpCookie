@@ -104,43 +104,34 @@ class Cookie {
 
         ~Cookie() = default;
 
-        static COOKIE::STATUS valid_max_age(std::uint_least64_t v) noexcept;
         COOKIE::STATUS set_max_age(std::string_view s) noexcept;
         std::optional<std::uint_least64_t> get_max_age() const noexcept { return max_age; };
 
-        static COOKIE::STATUS valid_name(std::string_view s) noexcept;
         COOKIE::STATUS set_name(std::string_view s) noexcept;
         std::string_view get_name() const noexcept { return name; };
 
-        static COOKIE::STATUS valid_value(std::string_view s) noexcept;
         COOKIE::STATUS set_value(std::string_view s) noexcept;
         std::string_view get_value() const noexcept { return value; };
 
-        static COOKIE::STATUS valid_path(std::string_view s) noexcept;
         COOKIE::STATUS set_path(std::string_view s) noexcept;
         std::optional<std::string> get_path() const noexcept { return path; };
 
-        static COOKIE::STATUS valid_domain(std::string_view s) noexcept;
         COOKIE::STATUS set_domain(std::string_view s) noexcept;
         std::optional<std::string> get_domain() const noexcept { return domain; };
 
-        static COOKIE::STATUS valid_expires(std::string_view s) noexcept;
         COOKIE::STATUS set_expires(std::string_view s) noexcept;
         std::optional<std::string> get_expires() const noexcept { return expires; };
 
-        static COOKIE::STATUS valid_same_site(std::string_view s) noexcept;
         COOKIE::STATUS set_same_site(std::string_view s) noexcept;
         std::optional<std::string> get_same_site() const noexcept { return same_site; };
 
         COOKIE::STATUS set_httponly(std::string_view s) noexcept;
         bool get_httponly() const noexcept { return httponly; };
 
-        static COOKIE::STATUS valid_partitioned(const bool secure, const bool partitioned) noexcept;
         COOKIE::STATUS validate_partitioned() noexcept;
         COOKIE::STATUS set_partitioned(std::string_view s) noexcept;
         bool get_partitioned() const noexcept { return partitioned; };
 
-        static COOKIE::STATUS valid_secure(std::string_view same_site, const bool secure) noexcept;
         COOKIE::STATUS validate_secure() noexcept;
         COOKIE::STATUS set_secure(std::string_view s) noexcept;
         bool get_secure() const noexcept { return secure; };

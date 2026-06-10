@@ -344,10 +344,6 @@ COOKIE::STATUS slim::common::http::Cookie::set_domain(std::string_view s) noexce
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::valid_domain(std::string_view s) noexcept {
-    return validate_domain(trim(s));
-}
-
 COOKIE::STATUS slim::common::http::Cookie::set_expires(std::string_view s) noexcept {
     std::string_view trimmed = trim(s);
     auto e = validate_expires(trimmed);
@@ -355,16 +351,8 @@ COOKIE::STATUS slim::common::http::Cookie::set_expires(std::string_view s) noexc
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::valid_expires(std::string_view s) noexcept {
-    return validate_expires(trim(s));
-}
-
 COOKIE::STATUS slim::common::http::Cookie::set_max_age(std::string_view s) noexcept {
     return get_max_age_value(s, max_age);
-}
-
-COOKIE::STATUS slim::common::http::Cookie::valid_max_age(std::uint_least64_t v) noexcept {
-    return validate_max_age(v);
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_name(std::string_view s) noexcept {
@@ -380,19 +368,11 @@ COOKIE::STATUS slim::common::http::Cookie::set_name(std::string_view s) noexcept
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::valid_name(std::string_view s) noexcept {
-    return validate_name(trim(s));
-}
-
 COOKIE::STATUS slim::common::http::Cookie::set_path(std::string_view s) noexcept {
     std::string_view trimmed = trim(s);
     auto e = validate_path(trimmed);
     if(e == COOKIE::STATUS::OK) path = std::string(trimmed);
     return e;
-}
-
-COOKIE::STATUS slim::common::http::Cookie::valid_path(std::string_view s) noexcept {
-    return validate_path(trim(s));
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_value(std::string_view s) noexcept {
@@ -408,19 +388,11 @@ COOKIE::STATUS slim::common::http::Cookie::set_value(std::string_view s) noexcep
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::valid_value(std::string_view s) noexcept {
-    return validate_value(trim(s));
-}
-
 COOKIE::STATUS slim::common::http::Cookie::set_same_site(std::string_view s) noexcept {
     std::string_view trimmed = trim(s);
     auto e = validate_same_site(trimmed);
     if(e == COOKIE::STATUS::OK) same_site = std::string(trimmed);
     return e;
-}
-
-COOKIE::STATUS slim::common::http::Cookie::valid_same_site(std::string_view s) noexcept {
-    return validate_same_site(trim(s));
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_httponly(std::string_view s) noexcept {
@@ -431,20 +403,12 @@ COOKIE::STATUS slim::common::http::Cookie::set_partitioned(std::string_view s) n
     return get_bool(s, partitioned);
 }
 
-COOKIE::STATUS slim::common::http::Cookie::valid_partitioned(const bool secure, const bool partitioned) noexcept {
-    return ::validate_partitioned(secure, partitioned);
-}
-
 COOKIE::STATUS slim::common::http::Cookie::validate_partitioned() noexcept {
     return ::validate_partitioned(secure, partitioned);
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_secure(std::string_view s) noexcept {
     return get_bool(s, secure);
-}
-
-COOKIE::STATUS slim::common::http::Cookie::valid_secure(std::string_view same_site, const bool secure) noexcept {
-    return ::validate_secure(trim(same_site), secure);
 }
 
 COOKIE::STATUS slim::common::http::Cookie::validate_secure() noexcept {

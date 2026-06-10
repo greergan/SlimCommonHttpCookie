@@ -270,6 +270,13 @@ TEST_CASE("set_expires trims leading and trailing whitespace before storing") {
     REQUIRE(c.get_expires() == "Thu, 01 Jan 2099 00:00:00 GMT");
 }
 
+TEST_CASE("set_expires stores a valid asctime date with a single-digit day") {
+    slim::common::http::Cookie c;
+    COOKIE::STATUS e = c.set_expires("Thu Jan  1 12:30:00 2099");
+    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(c.get_expires() == "Thu Jan  1 12:30:00 2099");
+}
+
 // ---------------------------------------------------------------------------
 // set_max_age
 // ---------------------------------------------------------------------------
@@ -353,7 +360,6 @@ TEST_CASE("set_same_site accepts None") {
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_same_site() == "None");
 }
-
 
 TEST_CASE("set_same_site is case-insensitive strict") {
     slim::common::http::Cookie c;
@@ -539,461 +545,144 @@ TEST_CASE("validate_partitioned returns error when Partitioned is true but Secur
 }
 
 // ---------------------------------------------------------------------------
-// valid_name (static)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("valid_name accepts a valid token") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_name("session_id");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_name rejects an empty string") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_name("");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_name rejects a name containing a separator character") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_name("bad=name");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_name rejects a name with a space") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_name("bad name");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_name rejects a name with a control character") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_name("bad\x01name");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_name rejects a name containing a colon") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_name("bad:name");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-// ---------------------------------------------------------------------------
-// valid_value (static)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("valid_value accepts a plain ASCII value") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_value("abc123");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_value accepts a properly double-quoted value") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_value("\"abc123\"");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_value rejects an unmatched leading double quote") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_value("\"abc");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_value rejects a value with a space character") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_value("bad value");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_value rejects a value with a semicolon") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_value("bad;value");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_value rejects a value with a DEL character") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_value("bad\x7Fvalue");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-// ---------------------------------------------------------------------------
-// valid_path (static)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("valid_path accepts the root path") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_path("/");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_path accepts a multi-segment path") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_path("/api/v1/resource");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_path rejects a path that does not start with slash") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_path("api/v1");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_path accepts an empty path") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_path("");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_path rejects a path containing a semicolon") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_path("/bad;path");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_path rejects a path with a control character") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_path("/bad\x1Fpath");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-// ---------------------------------------------------------------------------
-// valid_domain (static)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("valid_domain accepts a simple hostname") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain("example.com");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_domain accepts a domain with a leading dot") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain(".example.com");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_domain accepts a subdomain") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain("sub.example.com");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_domain rejects an empty string") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain("");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_domain rejects a bare dot") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain(".");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_domain rejects a domain with a trailing dot") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain("example.com.");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_domain rejects a label starting with a hyphen") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain("-bad.example.com");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_domain rejects a label ending with a hyphen") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain("bad-.example.com");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_domain rejects a domain exceeding 253 characters") {
-    std::string long_domain(63, 'a');
-    long_domain += ".";
-    long_domain += std::string(63, 'b');
-    long_domain += ".";
-    long_domain += std::string(63, 'c');
-    long_domain += ".";
-    long_domain += std::string(63, 'd');  // total = 4*63 + 3 dots = 255
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain(long_domain);
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_domain rejects a label with an invalid character") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_domain("bad_label.example.com");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-// ---------------------------------------------------------------------------
-// valid_expires (static)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("valid_expires accepts an RFC 1123 date") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts an RFC 850 date") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thursday, 01-Jan-99 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts an ANSI C asctime date") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu Jan  1 00:00:00 2099");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires rejects a malformed date string") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("not-a-date");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires rejects an ISO 8601 date") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("2099-01-01T00:00:00Z");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-// ---------------------------------------------------------------------------
-// valid_max_age (static)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("valid_max_age accepts zero") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_max_age(0u);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_max_age accepts a typical positive value") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_max_age(3600u);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_max_age accepts the maximum time_t value") {
-    constexpr std::uint_least64_t max_val =
-        static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max());
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_max_age(max_val);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_max_age rejects a value exceeding the maximum time_t value") {
-    constexpr std::uint_least64_t over_max =
-        static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max()) + 1;
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_max_age(over_max);
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-// ---------------------------------------------------------------------------
-// valid_same_site (static)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("valid_same_site accepts Strict") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_same_site("Strict");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_same_site accepts Lax") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_same_site("Lax");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_same_site accepts None") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_same_site("None");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_same_site is case-insensitive") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_same_site("strict");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_same_site rejects an unrecognised value") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_same_site("always");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_same_site rejects an empty string") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_same_site("");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-// ---------------------------------------------------------------------------
-// valid_secure (static)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("valid_secure accepts Strict with secure false") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_secure("Strict", false);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_secure accepts Lax with secure false") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_secure("Lax", false);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_secure accepts Strict with secure true") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_secure("Strict", true);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_secure accepts None with secure true") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_secure("None", true);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_secure rejects None with secure false") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_secure("None", false);
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_secure accepts an empty same_site with secure false") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_secure("", false);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_secure accepts an empty same_site with secure true") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_secure("", true);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-// ---------------------------------------------------------------------------
-// valid_partitioned (static)
-// ---------------------------------------------------------------------------
-
-TEST_CASE("valid_partitioned accepts secure true with partitioned true") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_partitioned(true, true);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_partitioned accepts secure true with partitioned false") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_partitioned(true, false);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_partitioned accepts secure false with partitioned false") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_partitioned(false, false);
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_partitioned rejects secure false with partitioned true") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_partitioned(false, true);
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-// ---------------------------------------------------------------------------
 // status_string - valid status codes
 // ---------------------------------------------------------------------------
 
 TEST_CASE("status_string returns OK for STATUS::OK") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::OK);
-	REQUIRE(str == "OK");
-	REQUIRE(str.length() == 2);
+    auto str = COOKIE::status_string(COOKIE::STATUS::OK);
+    REQUIRE(str == "OK");
+    REQUIRE(str.length() == 2);
 }
 
 TEST_CASE("status_string returns INVALID_BOOLEAN for STATUS::INVALID_BOOLEAN") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::INVALID_BOOLEAN);
-	REQUIRE(str == "INVALID_BOOLEAN");
-	REQUIRE(!str.empty());
+    auto str = COOKIE::status_string(COOKIE::STATUS::INVALID_BOOLEAN);
+    REQUIRE(str == "INVALID_BOOLEAN");
+    REQUIRE(!str.empty());
 }
 
 TEST_CASE("status_string returns DOMAIN_EMPTY for STATUS::DOMAIN_EMPTY") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_EMPTY);
-	REQUIRE(str == "DOMAIN_EMPTY");
+    auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_EMPTY);
+    REQUIRE(str == "DOMAIN_EMPTY");
 }
 
 TEST_CASE("status_string returns DOMAIN_BARE_DOT for STATUS::DOMAIN_BARE_DOT") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_BARE_DOT);
-	REQUIRE(str == "DOMAIN_BARE_DOT");
+    auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_BARE_DOT);
+    REQUIRE(str == "DOMAIN_BARE_DOT");
 }
 
 TEST_CASE("status_string returns DOMAIN_TRAILING_DOT for STATUS::DOMAIN_TRAILING_DOT") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_TRAILING_DOT);
-	REQUIRE(str == "DOMAIN_TRAILING_DOT");
+    auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_TRAILING_DOT);
+    REQUIRE(str == "DOMAIN_TRAILING_DOT");
 }
 
 TEST_CASE("status_string returns DOMAIN_TOO_LONG for STATUS::DOMAIN_TOO_LONG") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_TOO_LONG);
-	REQUIRE(str == "DOMAIN_TOO_LONG");
+    auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_TOO_LONG);
+    REQUIRE(str == "DOMAIN_TOO_LONG");
 }
 
 TEST_CASE("status_string returns DOMAIN_LABEL_EMPTY for STATUS::DOMAIN_LABEL_EMPTY") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_LABEL_EMPTY);
-	REQUIRE(str == "DOMAIN_LABEL_EMPTY");
+    auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_LABEL_EMPTY);
+    REQUIRE(str == "DOMAIN_LABEL_EMPTY");
 }
 
 TEST_CASE("status_string returns DOMAIN_LABEL_TOO_LONG for STATUS::DOMAIN_LABEL_TOO_LONG") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_LABEL_TOO_LONG);
-	REQUIRE(str == "DOMAIN_LABEL_TOO_LONG");
+    auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_LABEL_TOO_LONG);
+    REQUIRE(str == "DOMAIN_LABEL_TOO_LONG");
 }
 
 TEST_CASE("status_string returns DOMAIN_LABEL_INVALID_HYPHEN for STATUS::DOMAIN_LABEL_INVALID_HYPHEN") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
-	REQUIRE(str == "DOMAIN_LABEL_INVALID_HYPHEN");
+    auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
+    REQUIRE(str == "DOMAIN_LABEL_INVALID_HYPHEN");
 }
 
 TEST_CASE("status_string returns DOMAIN_INVALID_CHAR for STATUS::DOMAIN_INVALID_CHAR") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_INVALID_CHAR);
-	REQUIRE(str == "DOMAIN_INVALID_CHAR");
+    auto str = COOKIE::status_string(COOKIE::STATUS::DOMAIN_INVALID_CHAR);
+    REQUIRE(str == "DOMAIN_INVALID_CHAR");
 }
 
 TEST_CASE("status_string returns EXPIRES_INVALID_FORMAT for STATUS::EXPIRES_INVALID_FORMAT") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::EXPIRES_INVALID_FORMAT);
-	REQUIRE(str == "EXPIRES_INVALID_FORMAT");
+    auto str = COOKIE::status_string(COOKIE::STATUS::EXPIRES_INVALID_FORMAT);
+    REQUIRE(str == "EXPIRES_INVALID_FORMAT");
 }
 
 TEST_CASE("status_string returns PATH_MISSING_LEADING_SLASH for STATUS::PATH_MISSING_LEADING_SLASH") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::PATH_MISSING_LEADING_SLASH);
-	REQUIRE(str == "PATH_MISSING_LEADING_SLASH");
+    auto str = COOKIE::status_string(COOKIE::STATUS::PATH_MISSING_LEADING_SLASH);
+    REQUIRE(str == "PATH_MISSING_LEADING_SLASH");
 }
 
 TEST_CASE("status_string returns PATH_INVALID_CHAR for STATUS::PATH_INVALID_CHAR") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::PATH_INVALID_CHAR);
-	REQUIRE(str == "PATH_INVALID_CHAR");
+    auto str = COOKIE::status_string(COOKIE::STATUS::PATH_INVALID_CHAR);
+    REQUIRE(str == "PATH_INVALID_CHAR");
 }
 
 TEST_CASE("status_string returns MAX_AGE_EXCEEDS_LIMIT for STATUS::MAX_AGE_EXCEEDS_LIMIT") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::MAX_AGE_EXCEEDS_LIMIT);
-	REQUIRE(str == "MAX_AGE_EXCEEDS_LIMIT");
+    auto str = COOKIE::status_string(COOKIE::STATUS::MAX_AGE_EXCEEDS_LIMIT);
+    REQUIRE(str == "MAX_AGE_EXCEEDS_LIMIT");
 }
 
 TEST_CASE("status_string returns MAX_AGE_EMPTY for STATUS::MAX_AGE_EMPTY") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::MAX_AGE_EMPTY);
-	REQUIRE(str == "MAX_AGE_EMPTY");
+    auto str = COOKIE::status_string(COOKIE::STATUS::MAX_AGE_EMPTY);
+    REQUIRE(str == "MAX_AGE_EMPTY");
 }
 
 TEST_CASE("status_string returns MAX_AGE_INVALID_FORMAT for STATUS::MAX_AGE_INVALID_FORMAT") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::MAX_AGE_INVALID_FORMAT);
-	REQUIRE(str == "MAX_AGE_INVALID_FORMAT");
+    auto str = COOKIE::status_string(COOKIE::STATUS::MAX_AGE_INVALID_FORMAT);
+    REQUIRE(str == "MAX_AGE_INVALID_FORMAT");
 }
 
 TEST_CASE("status_string returns MAX_AGE_TRAILING_CHARS for STATUS::MAX_AGE_TRAILING_CHARS") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::MAX_AGE_TRAILING_CHARS);
-	REQUIRE(str == "MAX_AGE_TRAILING_CHARS");
+    auto str = COOKIE::status_string(COOKIE::STATUS::MAX_AGE_TRAILING_CHARS);
+    REQUIRE(str == "MAX_AGE_TRAILING_CHARS");
 }
 
 TEST_CASE("status_string returns NAME_EMPTY for STATUS::NAME_EMPTY") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::NAME_EMPTY);
-	REQUIRE(str == "NAME_EMPTY");
+    auto str = COOKIE::status_string(COOKIE::STATUS::NAME_EMPTY);
+    REQUIRE(str == "NAME_EMPTY");
 }
 
 TEST_CASE("status_string returns NAME_INVALID_CHAR for STATUS::NAME_INVALID_CHAR") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::NAME_INVALID_CHAR);
-	REQUIRE(str == "NAME_INVALID_CHAR");
+    auto str = COOKIE::status_string(COOKIE::STATUS::NAME_INVALID_CHAR);
+    REQUIRE(str == "NAME_INVALID_CHAR");
 }
 
 TEST_CASE("status_string returns NAME_PREFIX_REQUIRES_SECURE for STATUS::NAME_PREFIX_REQUIRES_SECURE") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::NAME_PREFIX_REQUIRES_SECURE);
-	REQUIRE(str == "NAME_PREFIX_REQUIRES_SECURE");
+    auto str = COOKIE::status_string(COOKIE::STATUS::NAME_PREFIX_REQUIRES_SECURE);
+    REQUIRE(str == "NAME_PREFIX_REQUIRES_SECURE");
 }
 
 TEST_CASE("status_string returns NAME_HOST_PREFIX_HAS_DOMAIN for STATUS::NAME_HOST_PREFIX_HAS_DOMAIN") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::NAME_HOST_PREFIX_HAS_DOMAIN);
-	REQUIRE(str == "NAME_HOST_PREFIX_HAS_DOMAIN");
+    auto str = COOKIE::status_string(COOKIE::STATUS::NAME_HOST_PREFIX_HAS_DOMAIN);
+    REQUIRE(str == "NAME_HOST_PREFIX_HAS_DOMAIN");
 }
 
 TEST_CASE("status_string returns NAME_HOST_PREFIX_INVALID_PATH for STATUS::NAME_HOST_PREFIX_INVALID_PATH") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::NAME_HOST_PREFIX_INVALID_PATH);
-	REQUIRE(str == "NAME_HOST_PREFIX_INVALID_PATH");
+    auto str = COOKIE::status_string(COOKIE::STATUS::NAME_HOST_PREFIX_INVALID_PATH);
+    REQUIRE(str == "NAME_HOST_PREFIX_INVALID_PATH");
 }
 
 TEST_CASE("status_string returns PARTITIONED_REQUIRES_SECURE for STATUS::PARTITIONED_REQUIRES_SECURE") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::PARTITIONED_REQUIRES_SECURE);
-	REQUIRE(str == "PARTITIONED_REQUIRES_SECURE");
+    auto str = COOKIE::status_string(COOKIE::STATUS::PARTITIONED_REQUIRES_SECURE);
+    REQUIRE(str == "PARTITIONED_REQUIRES_SECURE");
 }
 
 TEST_CASE("status_string returns SAMESITE_NONE_REQUIRES_SECURE for STATUS::SAMESITE_NONE_REQUIRES_SECURE") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::SAMESITE_NONE_REQUIRES_SECURE);
-	REQUIRE(str == "SAMESITE_NONE_REQUIRES_SECURE");
+    auto str = COOKIE::status_string(COOKIE::STATUS::SAMESITE_NONE_REQUIRES_SECURE);
+    REQUIRE(str == "SAMESITE_NONE_REQUIRES_SECURE");
 }
 
 TEST_CASE("status_string returns SAMESITE_INVALID for STATUS::SAMESITE_INVALID") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::SAMESITE_INVALID);
-	REQUIRE(str == "SAMESITE_INVALID");
+    auto str = COOKIE::status_string(COOKIE::STATUS::SAMESITE_INVALID);
+    REQUIRE(str == "SAMESITE_INVALID");
 }
 
 TEST_CASE("status_string returns VALUE_UNMATCHED_QUOTE for STATUS::VALUE_UNMATCHED_QUOTE") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::VALUE_UNMATCHED_QUOTE);
-	REQUIRE(str == "VALUE_UNMATCHED_QUOTE");
+    auto str = COOKIE::status_string(COOKIE::STATUS::VALUE_UNMATCHED_QUOTE);
+    REQUIRE(str == "VALUE_UNMATCHED_QUOTE");
 }
 
 TEST_CASE("status_string returns VALUE_INVALID_CHAR for STATUS::VALUE_INVALID_CHAR") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::VALUE_INVALID_CHAR);
-	REQUIRE(str == "VALUE_INVALID_CHAR");
+    auto str = COOKIE::status_string(COOKIE::STATUS::VALUE_INVALID_CHAR);
+    REQUIRE(str == "VALUE_INVALID_CHAR");
 }
 
 // ---------------------------------------------------------------------------
@@ -1001,446 +690,183 @@ TEST_CASE("status_string returns VALUE_INVALID_CHAR for STATUS::VALUE_INVALID_CH
 // ---------------------------------------------------------------------------
 
 TEST_CASE("status_string never returns empty string for valid status") {
-	for (int i = 0; i < static_cast<int>(COOKIE::STATUS::_COUNT); ++i) {
-		auto status = static_cast<COOKIE::STATUS>(i);
-		auto str = COOKIE::status_string(status);
-		REQUIRE(!str.empty());
-	}
-}
-
-TEST_CASE("status_string returns UNKNOWN for invalid status value") {
-	auto invalid_status = static_cast<COOKIE::STATUS>(
-		static_cast<uint8_t>(COOKIE::STATUS::_COUNT) + 1
-	);
-	auto str = COOKIE::status_string(invalid_status);
-	REQUIRE(str == "UNKNOWN");
-}
-
-TEST_CASE("status_string returns string_view") {
-	auto str = COOKIE::status_string(COOKIE::STATUS::OK);
-	static_assert(std::is_same_v<decltype(str), std::string_view>,
-		"status_string should return std::string_view");
-	REQUIRE(str == "OK");
-}
-
-TEST_CASE("status_string is constexpr") {
-	constexpr auto str = COOKIE::status_string(COOKIE::STATUS::OK);
-	static_assert(str == "OK");
-	REQUIRE(str == "OK");
-}
-
-TEST_CASE("status_string noexcept") {
-	static_assert(noexcept(COOKIE::status_string(COOKIE::STATUS::OK)));
-	REQUIRE(true);
-}
-
-// ---------------------------------------------------------------------------
-// valid_expires / set_expires – RFC 6265 §5.1.1 compliance
-// ---------------------------------------------------------------------------
-
-// ── field-order independence ───────────────────────────────────────────────
-// RFC 6265 §5.1.1 tokenises the string and matches each field type
-// independently; any permutation of time, day-of-month, month and year
-// must be accepted.
-
-TEST_CASE("valid_expires accepts date fields in any order: time first") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("00:00:00 01 Jan 2099");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts date fields in any order: year first") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("2099 Jan 01 00:00:00");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts date fields in any order: month first") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Jan 01 2099 00:00:00");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts date fields in any order: day first") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01 Jan 2099 00:00:00");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-// ── unrecognised tokens are silently skipped ───────────────────────────────
-// RFC 6265 §5.1.1: tokens that match none of the four field grammars are
-// ignored; they must not cause rejection.
-
-TEST_CASE("valid_expires ignores an unrecognised weekday token") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("BADDAY 01 Jan 2099 00:00:00");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires ignores extra tokens appearing after all required fields") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:00 GMT EXTRATOKEN");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires ignores a spurious numeric token once year is already matched") {
-    // "42" cannot fill any remaining slot; it must not cause rejection.
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01 Jan 2099 00:00:00 42");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-// ── first-match semantics ──────────────────────────────────────────────────
-// RFC 6265 §5.1.1: each field slot is filled by the first token that
-// matches its grammar; later matching tokens for an already-filled slot
-// are silently ignored and must not cause rejection.
-
-TEST_CASE("valid_expires applies first-match semantics: duplicate time token is ignored") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:00 12:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires applies first-match semantics: duplicate month token is ignored") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01 Jan Feb 2099 00:00:00");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires applies first-match semantics: duplicate year token is ignored") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:00 2100 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-// ── two-digit year expansion (§5.1.1 steps 6–7) ───────────────────────────
-// Years 70–99 map to 1970–1999; years 00–69 map to 2000–2069.
-// All expanded values are ≥ 1601 and therefore valid.
-
-TEST_CASE("valid_expires expands two-digit year 70 to 1970") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 70 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires expands two-digit year 99 to 1999") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 99 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires expands two-digit year 69 to 2069") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 69 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires expands two-digit year 00 to 2000") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 00 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-// ── time component range validation (§5.1.1 steps 11–13) ─────────────────
-
-TEST_CASE("valid_expires rejects hour value 24") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 24:00:00 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts hour boundary value 23") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 23:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires rejects minute value 60") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:60:00 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts minute boundary value 59") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:59:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires rejects second value 60") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:60 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts second boundary value 59") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:59 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts maximum time field values 23:59:59") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 31 Dec 2099 23:59:59 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-// ── day-of-month range validation (§5.1.1 step 10) ───────────────────────
-
-TEST_CASE("valid_expires rejects day-of-month value 0") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 00 Jan 2099 00:00:00 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires rejects day-of-month value 32") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 32 Jan 2099 00:00:00 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts day-of-month lower boundary 1") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts day-of-month upper boundary 31") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 31 Jan 2099 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-// ── year lower-bound validation (§5.1.1 step 8) ───────────────────────────
-
-TEST_CASE("valid_expires rejects four-digit year 1600") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 1600 00:00:00 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts four-digit year boundary 1601") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 1601 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-// ── missing required fields ────────────────────────────────────────────────
-// All four field types (time, day-of-month, month, year) are mandatory;
-// absence of any one must result in rejection.
-
-TEST_CASE("valid_expires rejects a date string missing the time component") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 2099 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires rejects a date string missing the day-of-month component") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, Jan 2099 00:00:00 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires rejects a date string missing the month component") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 2099 00:00:00 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires rejects a date string missing the year component") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 Jan 00:00:00 GMT");
-    REQUIRE(e != COOKIE::STATUS::OK);
-}
-
-// ── RFC 6265 §5.1.1 delimiter set ─────────────────────────────────────────
-// delimiter = %x09 / %x20-2F / %x3B-40 / %x5B-60 / %x7B-7E
-// Any character in this set is a valid token separator.
-
-TEST_CASE("valid_expires accepts horizontal tab (0x09) as a token delimiter") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01\tJan\t2099\t00:00:00");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts comma (0x2C) as a token delimiter") {
-    // ',' is in the range 0x20–2F and therefore a delimiter, not part of any token.
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01,Jan,2099,00:00:00");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts slash (0x2F) as a token delimiter") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("01/Jan/2099 00:00:00");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts mixed RFC 6265 delimiter characters") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu;\t01[Jan{2099}00:00:00");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-// ── month abbreviation case-insensitivity ─────────────────────────────────
-// RFC 6265 §5.1.1: month matching is case-insensitive.
-
-TEST_CASE("valid_expires accepts a lowercase month abbreviation") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 jan 2099 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts an uppercase month abbreviation") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 JAN 2099 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts a mixed-case month abbreviation") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu, 01 jAn 2099 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid_expires accepts all twelve month abbreviations") {
-    static constexpr std::array<std::string_view, 12> months = {
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    };
-    for (auto m : months) {
-        std::string s = "Thu, 15 " + std::string(m) + " 2099 00:00:00 GMT";
-        REQUIRE(slim::common::http::Cookie::valid_expires(s) == COOKIE::STATUS::OK);
+    for (int i = 0; i < static_cast<int>(COOKIE::STATUS::_COUNT); ++i) {
+        auto status = static_cast<COOKIE::STATUS>(i);
+        auto str = COOKIE::status_string(status);
+        REQUIRE(!str.empty());
     }
 }
 
-// ── single-digit day-of-month (§5.1.1: 1*2DIGIT) ─────────────────────────
-// The RFC grammar allows 1 OR 2 leading digits for day-of-month.
-// asctime-style dates space-pad single-digit days, producing a lone "1"–"9"
-// token after the double-space delimiter sequence.
-
-TEST_CASE("valid_expires accepts asctime date with single-digit day and double leading space") {
-    // Double space means the day token is the single character "1".
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu Jan  1 00:00:00 2099");
-    REQUIRE(e == COOKIE::STATUS::OK);
+TEST_CASE("status_string returns UNKNOWN for invalid status value") {
+    auto invalid_status = static_cast<COOKIE::STATUS>(
+        static_cast<uint8_t>(COOKIE::STATUS::_COUNT) + 1
+    );
+    auto str = COOKIE::status_string(invalid_status);
+    REQUIRE(str == "UNKNOWN");
 }
 
-TEST_CASE("valid_expires accepts asctime date with single-digit day and single leading space") {
-    COOKIE::STATUS e = slim::common::http::Cookie::valid_expires("Thu Jan 9 00:00:00 2099");
-    REQUIRE(e == COOKIE::STATUS::OK);
+TEST_CASE("status_string returns string_view") {
+    auto str = COOKIE::status_string(COOKIE::STATUS::OK);
+    static_assert(std::is_same_v<decltype(str), std::string_view>,
+        "status_string should return std::string_view");
+    REQUIRE(str == "OK");
 }
 
-TEST_CASE("set_expires stores a valid asctime date with a single-digit day") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_expires("Thu Jan  1 12:30:00 2099");
-    REQUIRE(e == COOKIE::STATUS::OK);
-    REQUIRE(c.get_expires() == "Thu Jan  1 12:30:00 2099");
+TEST_CASE("status_string is constexpr") {
+    constexpr auto str = COOKIE::status_string(COOKIE::STATUS::OK);
+    static_assert(str == "OK");
+    REQUIRE(str == "OK");
 }
 
+TEST_CASE("status_string noexcept") {
+    static_assert(noexcept(COOKIE::status_string(COOKIE::STATUS::OK)));
+    REQUIRE(true);
+}
+
+// ---------------------------------------------------------------------------
 // check cookie name + value sizes
+// ---------------------------------------------------------------------------
 
 TEST_CASE("Cookie set_name and set_value: minimal valid cookie", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const auto name_result = cookie.set_name("a");
-	const auto value_result = cookie.set_value("b");
-	REQUIRE(name_result == COOKIE::STATUS::OK);
-	REQUIRE(value_result == COOKIE::STATUS::OK);
+    slim::common::http::Cookie cookie;
+    const auto name_result = cookie.set_name("a");
+    const auto value_result = cookie.set_value("b");
+    REQUIRE(name_result == COOKIE::STATUS::OK);
+    REQUIRE(value_result == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("Cookie set_name: single character name", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const auto result = cookie.set_name("x");
-	REQUIRE(result == COOKIE::STATUS::OK);
+    slim::common::http::Cookie cookie;
+    const auto result = cookie.set_name("x");
+    REQUIRE(result == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("Cookie set_value: single character value", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const auto result = cookie.set_value("y");
-	REQUIRE(result == COOKIE::STATUS::OK);
+    slim::common::http::Cookie cookie;
+    const auto result = cookie.set_value("y");
+    REQUIRE(result == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("Cookie set_name and set_value: at maximum allowed size", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const std::string name(2048, 'n');
-	const std::string value(2048, 'v');
-	const auto name_result = cookie.set_name(name);
-	const auto value_result = cookie.set_value(value);
-	REQUIRE(name_result == COOKIE::STATUS::OK);
-	REQUIRE(value_result == COOKIE::STATUS::OK);
+    slim::common::http::Cookie cookie;
+    const std::string name(2048, 'n');
+    const std::string value(2048, 'v');
+    const auto name_result = cookie.set_name(name);
+    const auto value_result = cookie.set_value(value);
+    REQUIRE(name_result == COOKIE::STATUS::OK);
+    REQUIRE(value_result == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("Cookie set_name and set_value: realistic cookie", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const auto name_result = cookie.set_name("session_id");
-	const auto value_result =
-		cookie.set_value("abc123def456ghi789jkl012mno345pqr678stu901vwx234yz");
-	REQUIRE(name_result == COOKIE::STATUS::OK);
-	REQUIRE(value_result == COOKIE::STATUS::OK);
+    slim::common::http::Cookie cookie;
+    const auto name_result = cookie.set_name("session_id");
+    const auto value_result =
+        cookie.set_value("abc123def456ghi789jkl012mno345pqr678stu901vwx234yz");
+    REQUIRE(name_result == COOKIE::STATUS::OK);
+    REQUIRE(value_result == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("Cookie set_value: special characters", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const std::string value(4096, '\x42');   // all 'B'
-	const auto result = cookie.set_value(value);
-	REQUIRE(result == COOKIE::STATUS::OK);
+    slim::common::http::Cookie cookie;
+    const std::string value(4096, '\x42');   // all 'B'
+    const auto result = cookie.set_value(value);
+    REQUIRE(result == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("Cookie set_name: name exceeds maximum size", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const std::string name(4097, 'n');
-	const auto result = cookie.set_name(name);
-	REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    slim::common::http::Cookie cookie;
+    const std::string name(4097, 'n');
+    const auto result = cookie.set_name(name);
+    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie set_value: value exceeds maximum size", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const std::string value(4097, 'v');
-	const auto result = cookie.set_value(value);
-	REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    slim::common::http::Cookie cookie;
+    const std::string value(4097, 'v');
+    const auto result = cookie.set_value(value);
+    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie set_name: significantly over maximum", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const std::string name(8192, 'x');
-	const auto result = cookie.set_name(name);
-	REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    slim::common::http::Cookie cookie;
+    const std::string name(8192, 'x');
+    const auto result = cookie.set_name(name);
+    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie set_value: significantly over maximum", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const std::string value(8192, 'y');
-	const auto result = cookie.set_value(value);
-	REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    slim::common::http::Cookie cookie;
+    const std::string value(8192, 'y');
+    const auto result = cookie.set_value(value);
+    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie set_name: extremely large name", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const std::string name(1000000, 'z');
-	const auto result = cookie.set_name(name);
-	REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    slim::common::http::Cookie cookie;
+    const std::string name(1000000, 'z');
+    const auto result = cookie.set_name(name);
+    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie set_value: extremely large value", "[cookie][size]") {
-	slim::common::http::Cookie cookie;
-	const std::string value(1000000, 'z');
-	const auto result = cookie.set_value(value);
-	REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    slim::common::http::Cookie cookie;
+    const std::string value(1000000, 'z');
+    const auto result = cookie.set_value(value);
+    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie set_name: boundary test at 4096", "[cookie][size]") {
     slim::common::http::Cookie cookie1;
-	const std::string valid_name(4096, 'a');
-	const auto valid_result = cookie1.set_name(valid_name);
-	REQUIRE(valid_result == COOKIE::STATUS::OK);
+    const std::string valid_name(4096, 'a');
+    const auto valid_result = cookie1.set_name(valid_name);
+    REQUIRE(valid_result == COOKIE::STATUS::OK);
 
-	slim::common::http::Cookie cookie2;
-	const std::string oversized_name(4097, 'a');
-	const auto oversized_result = cookie2.set_name(oversized_name);
-	REQUIRE(oversized_result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    slim::common::http::Cookie cookie2;
+    const std::string oversized_name(4097, 'a');
+    const auto oversized_result = cookie2.set_name(oversized_name);
+    REQUIRE(oversized_result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie set_value: boundary test at 4096", "[cookie][size]") {
-	slim::common::http::Cookie cookie1;
-	const std::string valid_value(4096, 'b');
-	const auto valid_result = cookie1.set_value(valid_value);
-	REQUIRE(valid_result == COOKIE::STATUS::OK);
+    slim::common::http::Cookie cookie1;
+    const std::string valid_value(4096, 'b');
+    const auto valid_result = cookie1.set_value(valid_value);
+    REQUIRE(valid_result == COOKIE::STATUS::OK);
 
-	slim::common::http::Cookie cookie2;
-	const std::string oversized_value(4097, 'b');
-	const auto oversized_result = cookie2.set_value(oversized_value);
-	REQUIRE(oversized_result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    slim::common::http::Cookie cookie2;
+    const std::string oversized_value(4097, 'b');
+    const auto oversized_result = cookie2.set_value(oversized_value);
+    REQUIRE(oversized_result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie set_name: generated sizes near boundary", "[cookie][size]") {
-	auto size = GENERATE(4090, 4091, 4092, 4093, 4094, 4095, 4096);
-	slim::common::http::Cookie cookie;
-	const std::string name(static_cast<std::size_t>(size), 'n');
-	const auto result = cookie.set_name(name);
-	REQUIRE(result == COOKIE::STATUS::OK);
+    auto size = GENERATE(4090, 4091, 4092, 4093, 4094, 4095, 4096);
+    slim::common::http::Cookie cookie;
+    const std::string name(static_cast<std::size_t>(size), 'n');
+    const auto result = cookie.set_name(name);
+    REQUIRE(result == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("Cookie set_value: generated sizes near boundary", "[cookie][size]") {
-	auto size = GENERATE(4090, 4091, 4092, 4093, 4094, 4095, 4096);
-	slim::common::http::Cookie cookie;
-	const std::string value(static_cast<std::size_t>(size), 'v');
-	const auto result = cookie.set_value(value);
-	REQUIRE(result == COOKIE::STATUS::OK);
+    auto size = GENERATE(4090, 4091, 4092, 4093, 4094, 4095, 4096);
+    slim::common::http::Cookie cookie;
+    const std::string value(static_cast<std::size_t>(size), 'v');
+    const auto result = cookie.set_value(value);
+    REQUIRE(result == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("Cookie set_name: generated sizes over boundary", "[cookie][size]") {
-	auto size = GENERATE(4097, 4098, 4099, 4100, 4101);
-	slim::common::http::Cookie cookie;
-	const std::string name(static_cast<std::size_t>(size), 'n');
-	const auto result = cookie.set_name(name);
-	REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    auto size = GENERATE(4097, 4098, 4099, 4100, 4101);
+    slim::common::http::Cookie cookie;
+    const std::string name(static_cast<std::size_t>(size), 'n');
+    const auto result = cookie.set_name(name);
+    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie set_value: generated sizes over boundary", "[cookie][size]") {
-	auto size = GENERATE(4097, 4098, 4099, 4100, 4101);
-	slim::common::http::Cookie cookie;
-	const std::string value(static_cast<std::size_t>(size), 'v');
-	const auto result = cookie.set_value(value);
-	REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
+    auto size = GENERATE(4097, 4098, 4099, 4100, 4101);
+    slim::common::http::Cookie cookie;
+    const std::string value(static_cast<std::size_t>(size), 'v');
+    const auto result = cookie.set_value(value);
+    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
