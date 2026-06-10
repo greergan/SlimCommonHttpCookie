@@ -1,14 +1,10 @@
 #ifndef SLIM_COMMON_HTTP_COOKIE_H
 #define SLIM_COMMON_HTTP_COOKIE_H
 
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
-#include <type_traits>
-#include <utility>
 #include <array>
-#include <slim/SlimValue.hpp>
 
 #define SLIMCOMMONHTTPCOOKIE_VERSION  "@SLIMCOMMONHTTPCOOKIE_VERSION@"
 #define SLIMCOMMONHTTPCOOKIE_GIT_HASH "@SLIMCOMMONHTTPCOOKIE_GIT_HASH@"
