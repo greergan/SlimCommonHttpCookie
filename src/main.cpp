@@ -181,8 +181,7 @@ constexpr COOKIE::STATUS validate_expires(std::string_view& s) noexcept {
 					if (d1 >= '0' && d1 <= '9') {
 						// two leading digits — valid only if third
 						// char (if any) is non-digit
-						const auto d2 = len > 2 ?
-							static_cast<unsigned char>(s[tok_start + 2]) : 0u; d = (d0 - '0') * 10 + (d1 - '0');
+						const auto d2 = len > 2 ? static_cast<unsigned char>(s[tok_start + 2]) : 0u; d = (d0 - '0') * 10 + (d1 - '0');
 						valid_dom = (len == 2 || d2 < '0' || d2 > '9');
 					} else {
 						// digit immediately followed by
@@ -265,8 +264,8 @@ constexpr COOKIE::STATUS validate_path(std::string_view& s) noexcept {
 constexpr COOKIE::STATUS validate_prefixes(std::string_view name, const std::optional<std::string>& domain,
         const std::optional<std::string>& path, bool secure) noexcept {
     if (name.empty()) return COOKIE::STATUS::NAME_EMPTY;
-    const bool is_secure_prefix = ::istarts_with(name, "__secure-");
-    const bool is_host_prefix = ::istarts_with(name, "__host-");
+    const bool is_secure_prefix = name.starts_with("__Secure-");
+    const bool is_host_prefix   = name.starts_with("__Host-");
     if (!is_secure_prefix && !is_host_prefix) return COOKIE::STATUS::OK;
     if (!secure) return COOKIE::STATUS::NAME_PREFIX_REQUIRES_SECURE;
     if (is_host_prefix) {
