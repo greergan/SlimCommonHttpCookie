@@ -123,12 +123,15 @@ class Cookie {
         COOKIE::STATUS set_same_site(std::string_view s) noexcept;
         std::optional<std::string> get_same_site() const noexcept { return same_site; };
 
+        void set_httponly(bool b) noexcept { httponly = b; };
         COOKIE::STATUS set_httponly(std::string_view s) noexcept;
         bool get_httponly() const noexcept { return httponly; };
 
+        void set_partitioned(bool b) noexcept { partitioned = b; };
         COOKIE::STATUS set_partitioned(std::string_view s) noexcept;
         bool get_partitioned() const noexcept { return partitioned; };
 
+        void set_secure(bool b) noexcept { secure = b; };
         COOKIE::STATUS set_secure(std::string_view s) noexcept;
         bool get_secure() const noexcept { return secure; };
 
