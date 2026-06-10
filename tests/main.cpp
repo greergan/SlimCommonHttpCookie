@@ -3,6 +3,24 @@
 #include <string>
 #include <slim/common/http/cookie.h>
 
+
+
+TEST_CASE("cookie compare ") {
+    slim::common::http::Cookie c1, c2, c3;
+
+    COOKIE::STATUS e1 = c1.set_name("cookie_name");
+    REQUIRE(e1 == COOKIE::STATUS::OK);
+
+    COOKIE::STATUS e2 = c2.set_name("cookie_name");
+    REQUIRE(e2 == COOKIE::STATUS::OK);
+
+    REQUIRE(c1 == c2);
+
+    COOKIE::STATUS e3 = c3.set_name("cookie_three");
+    REQUIRE(e3 == COOKIE::STATUS::OK);
+    REQUIRE(c1 != c3);
+}
+
 // ---------------------------------------------------------------------------
 // set_name
 // ---------------------------------------------------------------------------

@@ -99,6 +99,8 @@ class Cookie {
         Cookie(Cookie&& other) = delete;
         Cookie& operator=(Cookie&& other) = delete;
 
+        constexpr bool operator==(const Cookie& other) const noexcept = default;
+
         ~Cookie() = default;
 
         COOKIE::STATUS set_max_age(std::string_view s) noexcept;
