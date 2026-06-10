@@ -136,7 +136,6 @@ class Cookie {
         COOKIE::STATUS set_secure(std::string_view s) noexcept;
         bool get_secure() const noexcept { return secure; };
 
-        COOKIE::STATUS validate_prefixes() const noexcept;
         std::string serialize() const;
 
     private:

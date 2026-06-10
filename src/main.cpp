@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <limits>
 #include <locale>
+#include <optional>
 #include <slim/SlimValue.hpp>
 #include <sstream>
 #include <string>
@@ -273,6 +274,20 @@ constexpr COOKIE::STATUS validate_path(std::string_view s) noexcept {
     return COOKIE::STATUS::OK;
 }
 
+constexpr COOKIE::STATUS validate_prefixes(std::string_view name, std::optional<std::string> domain,
+        std::optional<std::string> path, bool secure) noexcept {
+    if (name.empty()) return COOKIE::STATUS::NAME_EMPTY;
+    const bool is_secure_prefix = ::istarts_with(name, "__secure-");
+    const bool is_host_prefix = ::istarts_with(name, "__host-");
+    if (!is_secure_prefix && !is_host_prefix) return COOKIE::STATUS::OK;
+    if (!secure) return COOKIE::STATUS::NAME_PREFIX_REQUIRES_SECURE;
+    if (is_host_prefix) {
+        if (domain.has_value() && !domain->empty()) return COOKIE::STATUS::NAME_HOST_PREFIX_HAS_DOMAIN;
+        if (!path.has_value() || path.value() != "/") return COOKIE::STATUS::NAME_HOST_PREFIX_INVALID_PATH;
+    }
+    return COOKIE::STATUS::OK;
+}
+
 constexpr COOKIE::STATUS validate_max_age(std::uint_least64_t v) noexcept {
     return (v > static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max())) ? COOKIE::STATUS::MAX_AGE_EXCEEDS_LIMIT : COOKIE::STATUS::OK;
 }
@@ -413,19 +428,6 @@ COOKIE::STATUS slim::common::http::Cookie::set_secure(std::string_view s) noexce
 
 COOKIE::STATUS slim::common::http::Cookie::validate_secure() noexcept {
     return ::validate_secure(same_site.value_or(""), secure);
-}
-
-COOKIE::STATUS slim::common::http::Cookie::validate_prefixes() const noexcept {
-    if (name.empty()) return COOKIE::STATUS::NAME_EMPTY;
-    const bool is_secure_prefix = ::istarts_with(name, "__secure-");
-    const bool is_host_prefix = ::istarts_with(name, "__host-");
-    if (!is_secure_prefix && !is_host_prefix) return COOKIE::STATUS::OK;
-    if (!secure) return COOKIE::STATUS::NAME_PREFIX_REQUIRES_SECURE;
-    if (is_host_prefix) {
-        if (domain.has_value() && !domain->empty()) return COOKIE::STATUS::NAME_HOST_PREFIX_HAS_DOMAIN;
-        if (!path.has_value() || path.value() != "/") return COOKIE::STATUS::NAME_HOST_PREFIX_INVALID_PATH;
-    }
-    return COOKIE::STATUS::OK;
 }
 
 std::string slim::common::http::Cookie::serialize() const {
