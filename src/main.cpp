@@ -102,6 +102,11 @@ constexpr int month_abbr_to_int(std::string_view s) noexcept {
     }
 }
 
+constexpr bool validate_cookie_size(std::string_view name, std::string_view value) noexcept {
+    // RFC 6265 recommends a limit of 4096 bytes for name + value
+    return (name.size() + value.size()) <= 4096;
+}
+
 constexpr COOKIE::STATUS validate_domain(std::string_view s) noexcept {
     if (s.empty()) return COOKIE::STATUS::DOMAIN_EMPTY;
     if (s.front() == '.') s.remove_prefix(1);
@@ -365,7 +370,13 @@ COOKIE::STATUS slim::common::http::Cookie::valid_max_age(std::uint_least64_t v) 
 COOKIE::STATUS slim::common::http::Cookie::set_name(std::string_view s) noexcept {
     std::string_view trimmed = trim(s);
     auto e = validate_name(trimmed);
-    if(e == COOKIE::STATUS::OK) name = std::string(trimmed);
+    if (e == COOKIE::STATUS::OK) {
+        // 'value' is a member std::string; it converts to string_view automatically
+        if (!::validate_cookie_size(trimmed, value))
+            return COOKIE::STATUS::COOKIE_TOO_LARGE;
+
+        name = std::string(trimmed);
+    }
     return e;
 }
 
@@ -387,7 +398,13 @@ COOKIE::STATUS slim::common::http::Cookie::valid_path(std::string_view s) noexce
 COOKIE::STATUS slim::common::http::Cookie::set_value(std::string_view s) noexcept {
     std::string_view trimmed = trim(s);
     auto e = validate_value(trimmed);
-    if(e == COOKIE::STATUS::OK) value = std::string(trimmed);
+    if (e == COOKIE::STATUS::OK) {
+        // 'name' is a member std::string
+        if (!::validate_cookie_size(name, trimmed))
+            return COOKIE::STATUS::COOKIE_TOO_LARGE;
+
+        value = std::string(trimmed);
+    }
     return e;
 }
 

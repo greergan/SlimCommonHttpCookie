@@ -16,7 +16,7 @@
 namespace COOKIE {
     enum struct STATUS : uint8_t {
         OK = 0,
-        INVALID_BOOLEAN,
+        COOKIE_TOO_LARGE,
         DOMAIN_EMPTY,
         DOMAIN_BARE_DOT,
         DOMAIN_TRAILING_DOT,
@@ -26,6 +26,7 @@ namespace COOKIE {
         DOMAIN_LABEL_INVALID_HYPHEN,
         DOMAIN_INVALID_CHAR,
         EXPIRES_INVALID_FORMAT,
+        INVALID_BOOLEAN,
         PATH_MISSING_LEADING_SLASH,
         PATH_INVALID_CHAR,
         MAX_AGE_EXCEEDS_LIMIT,
@@ -49,7 +50,7 @@ namespace COOKIE {
     namespace detail {
         constexpr std::array<std::string_view, static_cast<std::size_t>(STATUS::_COUNT)> status_strings = {
             "OK",
-            "INVALID_BOOLEAN",
+            "COOKIE_TOO_LARGE",
             "DOMAIN_EMPTY",
             "DOMAIN_BARE_DOT",
             "DOMAIN_TRAILING_DOT",
@@ -59,6 +60,7 @@ namespace COOKIE {
             "DOMAIN_LABEL_INVALID_HYPHEN",
             "DOMAIN_INVALID_CHAR",
             "EXPIRES_INVALID_FORMAT",
+            "INVALID_BOOLEAN",
             "PATH_MISSING_LEADING_SLASH",
             "PATH_INVALID_CHAR",
             "MAX_AGE_EXCEEDS_LIMIT",
