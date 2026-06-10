@@ -533,14 +533,14 @@ TEST_CASE("validate_partitioned returns no error when Secure is true and Partiti
     slim::common::http::Cookie c;
     c.set_secure("true");
     c.set_partitioned("true");
-    auto e = c.validate_partitioned();
+    auto e = c.validate();
     REQUIRE(e == COOKIE::STATUS::OK);
 }
 
 TEST_CASE("validate_partitioned returns error when Partitioned is true but Secure is false") {
     slim::common::http::Cookie c;
     c.set_partitioned("true");
-    auto e = c.validate_partitioned();
+    auto e = c.validate();
     REQUIRE(e != COOKIE::STATUS::OK);
 }
 

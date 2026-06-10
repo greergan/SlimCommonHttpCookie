@@ -128,13 +128,13 @@ class Cookie {
         COOKIE::STATUS set_httponly(std::string_view s) noexcept;
         bool get_httponly() const noexcept { return httponly; };
 
-        COOKIE::STATUS validate_partitioned() noexcept;
         COOKIE::STATUS set_partitioned(std::string_view s) noexcept;
         bool get_partitioned() const noexcept { return partitioned; };
 
         COOKIE::STATUS set_secure(std::string_view s) noexcept;
         bool get_secure() const noexcept { return secure; };
 
+        COOKIE::STATUS validate() const noexcept;
         std::string serialize() const;
 
     private:

@@ -342,7 +342,8 @@ constexpr COOKIE::STATUS validate_value(std::string_view s) noexcept {
     if (s.empty()) return COOKIE::STATUS::OK;
     if (s.front() == '"') {
         if (s.size() < 2 || s.back() != '"') return COOKIE::STATUS::VALUE_UNMATCHED_QUOTE;
-        s = s.substr(1, s.size() - 2);
+        s.remove_prefix(1);
+        s.remove_suffix(1);
     }
     for (char c : s) {
         if (!ascii.is_cookie_char[static_cast<unsigned char>(c)]) return COOKIE::STATUS::VALUE_INVALID_CHAR;
@@ -418,12 +419,12 @@ COOKIE::STATUS slim::common::http::Cookie::set_partitioned(std::string_view s) n
     return get_bool(s, partitioned);
 }
 
-COOKIE::STATUS slim::common::http::Cookie::validate_partitioned() noexcept {
-    return ::validate_partitioned(secure, partitioned);
-}
-
 COOKIE::STATUS slim::common::http::Cookie::set_secure(std::string_view s) noexcept {
     return get_bool(s, secure);
+}
+
+COOKIE::STATUS slim::common::http::Cookie::validate() const noexcept {
+    return COOKIE::STATUS::OK;
 }
 
 std::string slim::common::http::Cookie::serialize() const {
