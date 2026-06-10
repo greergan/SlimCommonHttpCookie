@@ -9,7 +9,7 @@
 
 TEST_CASE("set_name accepts a valid token") {
     slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_name("session_id");
+    COOKIE::STATUS e = c.set_name("   session_id   ");
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_name() == "session_id");
 }
@@ -57,7 +57,7 @@ TEST_CASE("set_name trims leading and trailing whitespace before storing") {
 
 TEST_CASE("set_value accepts a plain ASCII value") {
     slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_value("abc123");
+    COOKIE::STATUS e = c.set_value("\t abc123\t");
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_value() == "abc123");
 }
@@ -234,7 +234,7 @@ TEST_CASE("set_domain trims leading and trailing whitespace before storing") {
 
 TEST_CASE("set_expires accepts an RFC 1123 date") {
     slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_expires("Thu, 01 Jan 2099 00:00:00 GMT");
+    COOKIE::STATUS e = c.set_expires("  Thu, 01 Jan 2099 00:00:00 GMT  ");
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_expires() == "Thu, 01 Jan 2099 00:00:00 GMT");
 }
@@ -281,7 +281,14 @@ TEST_CASE("set_expires stores a valid asctime date with a single-digit day") {
 // set_max_age
 // ---------------------------------------------------------------------------
 
-TEST_CASE("set_max_age accepts zero") {
+TEST_CASE("set_max_age accepts zero using numeric") {
+    slim::common::http::Cookie c;
+    COOKIE::STATUS e = c.set_max_age(0);
+    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(c.get_max_age() == 0u);
+}
+
+TEST_CASE("set_max_age accepts zero using string") {
     slim::common::http::Cookie c;
     COOKIE::STATUS e = c.set_max_age("0");
     REQUIRE(e == COOKIE::STATUS::OK);
@@ -290,6 +297,13 @@ TEST_CASE("set_max_age accepts zero") {
 
 TEST_CASE("set_max_age accepts a positive integer") {
     slim::common::http::Cookie c;
+    COOKIE::STATUS e = c.set_max_age(3600);
+    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(c.get_max_age() == 3600u);
+}
+
+TEST_CASE("set_max_age accepts a positive integer string") {
+    slim::common::http::Cookie c;
     COOKIE::STATUS e = c.set_max_age("3600");
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_max_age() == 3600u);
@@ -297,8 +311,7 @@ TEST_CASE("set_max_age accepts a positive integer") {
 
 TEST_CASE("set_max_age accepts the maximum time_t value") {
     slim::common::http::Cookie c;
-    constexpr std::uint_least64_t max_val =
-        static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max());
+    constexpr std::uint_least64_t max_val = static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max());
     COOKIE::STATUS e = c.set_max_age(std::to_string(max_val));
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_max_age() == max_val);
@@ -306,8 +319,7 @@ TEST_CASE("set_max_age accepts the maximum time_t value") {
 
 TEST_CASE("set_max_age rejects a value exceeding the maximum time_t value") {
     slim::common::http::Cookie c;
-    constexpr std::uint_least64_t over_max =
-        static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max()) + 1;
+    constexpr std::uint_least64_t over_max = static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max()) + 1;
     COOKIE::STATUS e = c.set_max_age(std::to_string(over_max));
     REQUIRE(e != COOKIE::STATUS::OK);
 }
@@ -342,21 +354,21 @@ TEST_CASE("set_max_age rejects an empty string") {
 
 TEST_CASE("set_same_site accepts Strict") {
     slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("Strict");
+    COOKIE::STATUS e = c.set_same_site(" Strict\t");
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_same_site() == "Strict");
 }
 
 TEST_CASE("set_same_site accepts Lax") {
     slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("Lax");
+    COOKIE::STATUS e = c.set_same_site("Lax    ");
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_same_site() == "Lax");
 }
 
 TEST_CASE("set_same_site accepts None") {
     slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("None");
+    COOKIE::STATUS e = c.set_same_site("     None");
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_same_site() == "None");
 }
@@ -377,7 +389,7 @@ TEST_CASE("set_same_site is case-insensitive lax") {
 
 TEST_CASE("set_same_site is case-insensitive none") {
     slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("none");
+    COOKIE::STATUS e = c.set_same_site("  none");
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_same_site() == "none");
 }
