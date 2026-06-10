@@ -342,10 +342,11 @@ TEST_CASE("set_max_age rejects a value exceeding the maximum time_t value") {
     REQUIRE(e != COOKIE::STATUS::OK);
 }
 
-TEST_CASE("set_max_age rejects a negative integer") {
+TEST_CASE("set_max_age translates a negative integer to 0") {
     slim::common::http::Cookie c;
     COOKIE::STATUS e = c.set_max_age("-1");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(c.get_max_age() == 0);
 }
 
 TEST_CASE("set_max_age rejects a non-numeric string") {

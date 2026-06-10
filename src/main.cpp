@@ -283,15 +283,26 @@ constexpr COOKIE::STATUS validate_max_age(std::uint_least64_t v) noexcept {
 constexpr COOKIE::STATUS get_max_age_value(std::string_view& s, std::optional<std::uint_least64_t>& v) noexcept {
     trim(s);
     if (s.empty()) return COOKIE::STATUS::MAX_AGE_EMPTY;
+    bool is_negative = (!s.empty() && s[0] == '-');
+    if(is_negative) s.remove_prefix(1);
+
     std::uint_least64_t temp_value = 0;
     auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), temp_value);
 
     if (ec != std::errc{}) return COOKIE::STATUS::MAX_AGE_INVALID_FORMAT;
     if (ptr != s.data() + s.size()) return COOKIE::STATUS::MAX_AGE_TRAILING_CHARS;
 
-    COOKIE::STATUS e = validate_max_age(temp_value);
-    if(e == COOKIE::STATUS::OK) v = temp_value;
-    return e;
+    if(is_negative) {
+        v = 0;
+        return COOKIE::STATUS::OK;
+    }
+    else {
+        COOKIE::STATUS e = validate_max_age(temp_value);
+        if(e == COOKIE::STATUS::OK)  v = temp_value;
+        return e;
+    }
+
+    return COOKIE::STATUS::OK;
 }
 
 constexpr COOKIE::STATUS validate_name(std::string_view& s) noexcept {
