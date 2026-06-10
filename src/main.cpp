@@ -49,8 +49,7 @@ constexpr AsciiTables ascii{};
 constexpr bool iequals(std::string_view a, std::string_view b) noexcept {
     if (a.size() != b.size()) return false;
     for (size_t i = 0; i < a.size(); ++i) {
-        if (ascii.to_lower[static_cast<unsigned char>(a[i])] != static_cast<unsigned char>(b[i]))
-            return false;
+        if (ascii.to_lower[static_cast<unsigned char>(a[i])] != static_cast<unsigned char>(b[i])) return false;
     }
     return true;
 }
@@ -60,21 +59,18 @@ constexpr bool istarts_with(std::string_view s, std::string_view prefix) noexcep
     return iequals(s.substr(0, prefix.size()), prefix);
 }
 
-constexpr std::string_view trim(std::string_view s) noexcept {
-    while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.front())])
-        s.remove_prefix(1);
-    while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.back())])
-        s.remove_suffix(1);
-    return s;
+constexpr void trim(std::string_view& s) noexcept {
+    while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.front())]) s.remove_prefix(1);
+    while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.back())]) s.remove_suffix(1);
 }
 
 constexpr COOKIE::STATUS get_bool(std::string_view s, bool& b) noexcept {
-    std::string_view trimmed = trim(s);
-    if (iequals(trimmed, "true")) {
+    trim(s);
+    if (iequals(s, "true")) {
         b = true;
         return COOKIE::STATUS::OK;
     }
-    if (iequals(trimmed, "false")) {
+    if (iequals(s, "false")) {
         b = false;
         return COOKIE::STATUS::OK;
     }
@@ -108,7 +104,8 @@ constexpr bool validate_cookie_size(std::string_view name, std::string_view valu
     return (name.size() + value.size()) <= 4096;
 }
 
-constexpr COOKIE::STATUS validate_domain(std::string_view s) noexcept {
+constexpr COOKIE::STATUS validate_domain(std::string_view& s) noexcept {
+    trim(s);
     if (s.empty()) return COOKIE::STATUS::DOMAIN_EMPTY;
     if (s.front() == '.') s.remove_prefix(1);
     if (s.empty()) return COOKIE::STATUS::DOMAIN_BARE_DOT;
@@ -132,11 +129,13 @@ constexpr COOKIE::STATUS validate_domain(std::string_view s) noexcept {
     return COOKIE::STATUS::OK;
 }
 
-constexpr COOKIE::STATUS validate_expires(std::string_view s) noexcept {
+constexpr COOKIE::STATUS validate_expires(std::string_view& s) noexcept {
 	// RFC 6265 §5.1.1 cookie-date algorithm.
 	// Tokenises on the RFC delimiter set; tries each token as
 	// time → day-of-month → month → year (first-match semantics,
 	// one slot per field type); then validates all ranges.
+
+	trim(s);
 
 	bool found_time  = false, found_dom  = false;
 	bool found_month = false, found_year = false;
@@ -183,17 +182,13 @@ constexpr COOKIE::STATUS validate_expires(std::string_view s) noexcept {
 				int d;
 				bool valid_dom;
 				if (len >= 2) {
-					const auto d1 =
-						static_cast<unsigned char>(s[tok_start + 1]);
+					const auto d1 =	static_cast<unsigned char>(s[tok_start + 1]);
 					if (d1 >= '0' && d1 <= '9') {
 						// two leading digits — valid only if third
 						// char (if any) is non-digit
 						const auto d2 = len > 2 ?
-							static_cast<unsigned char>(
-								s[tok_start + 2]) : 0u;
-						d = (d0 - '0') * 10 + (d1 - '0');
-						valid_dom = (len == 2 || d2 < '0' ||
-							d2 > '9');
+							static_cast<unsigned char>(s[tok_start + 2]) : 0u; d = (d0 - '0') * 10 + (d1 - '0');
+						valid_dom = (len == 2 || d2 < '0' || d2 > '9');
 					} else {
 						// digit immediately followed by
 						// non-digit: e.g. "1st"
@@ -233,8 +228,7 @@ constexpr COOKIE::STATUS validate_expires(std::string_view s) noexcept {
 				if (len >= 4) {
 					const auto y2 = static_cast<unsigned char>(s[tok_start + 2]);
 					const auto y3 =	static_cast<unsigned char>(s[tok_start + 3]);
-					if (y2 >= '0' && y2 <= '9' && y3 >= '0' && y3 <= '9')
-						year = year * 100 + (y2 - '0') * 10 + (y3 - '0');
+					if (y2 >= '0' && y2 <= '9' && y3 >= '0' && y3 <= '9') year = year * 100 + (y2 - '0') * 10 + (y3 - '0');
 				}
 				found_year = true;
 				if (found_time & found_dom & found_month) break;
@@ -245,12 +239,10 @@ constexpr COOKIE::STATUS validate_expires(std::string_view s) noexcept {
 	}
 
 	// ── all four fields mandatory ───────────────────────────────────
-	if (!found_time | !found_dom | !found_month | !found_year)
-		return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
+	if (!found_time | !found_dom | !found_month | !found_year) return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
 
 	// ── two-digit year expansion (§5.1.1 steps 6–7) ────────────────
-	if (year <= 99)
-		year += (year >= 70) ? 1900 : 2000;
+	if (year <= 99) year += (year >= 70) ? 1900 : 2000;
 
 	// ── range checks (§5.1.1 steps 8–13) ───────────────────────────
 	if (   year   < 1601          // step 8
@@ -264,7 +256,8 @@ constexpr COOKIE::STATUS validate_expires(std::string_view s) noexcept {
 	return COOKIE::STATUS::OK;
 }
 
-constexpr COOKIE::STATUS validate_path(std::string_view s) noexcept {
+constexpr COOKIE::STATUS validate_path(std::string_view& s) noexcept {
+    trim(s);
     if (s.empty()) return COOKIE::STATUS::OK;
     if (s.front() != '/') return COOKIE::STATUS::PATH_MISSING_LEADING_SLASH;
     for (char c : s) {
@@ -274,8 +267,8 @@ constexpr COOKIE::STATUS validate_path(std::string_view s) noexcept {
     return COOKIE::STATUS::OK;
 }
 
-constexpr COOKIE::STATUS validate_prefixes(std::string_view name, std::optional<std::string> domain,
-        std::optional<std::string> path, bool secure) noexcept {
+constexpr COOKIE::STATUS validate_prefixes(std::string_view name, const std::optional<std::string>& domain,
+        const std::optional<std::string>& path, bool secure) noexcept {
     if (name.empty()) return COOKIE::STATUS::NAME_EMPTY;
     const bool is_secure_prefix = ::istarts_with(name, "__secure-");
     const bool is_host_prefix = ::istarts_with(name, "__host-");
@@ -292,24 +285,22 @@ constexpr COOKIE::STATUS validate_max_age(std::uint_least64_t v) noexcept {
     return (v > static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max())) ? COOKIE::STATUS::MAX_AGE_EXCEEDS_LIMIT : COOKIE::STATUS::OK;
 }
 
-constexpr COOKIE::STATUS get_max_age_value(std::string_view s, std::optional<std::uint_least64_t>& v) noexcept {
-    std::string_view trimmed = trim(s);
-    if (trimmed.empty()) return COOKIE::STATUS::MAX_AGE_EMPTY;
+constexpr COOKIE::STATUS get_max_age_value(std::string_view& s, std::optional<std::uint_least64_t>& v) noexcept {
+    trim(s);
+    if (s.empty()) return COOKIE::STATUS::MAX_AGE_EMPTY;
     std::uint_least64_t temp_value = 0;
-    auto [ptr, ec] = std::from_chars(trimmed.data(), trimmed.data() + trimmed.size(), temp_value);
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), temp_value);
 
-    if (ec != std::errc{})
-        return COOKIE::STATUS::MAX_AGE_INVALID_FORMAT;
-
-    if (ptr != trimmed.data() + trimmed.size())
-        return COOKIE::STATUS::MAX_AGE_TRAILING_CHARS;
+    if (ec != std::errc{}) return COOKIE::STATUS::MAX_AGE_INVALID_FORMAT;
+    if (ptr != s.data() + s.size()) return COOKIE::STATUS::MAX_AGE_TRAILING_CHARS;
 
     COOKIE::STATUS e = validate_max_age(temp_value);
     if(e == COOKIE::STATUS::OK) v = temp_value;
     return e;
 }
 
-constexpr COOKIE::STATUS validate_name(std::string_view s) noexcept {
+constexpr COOKIE::STATUS validate_name(std::string_view& s) noexcept {
+    trim(s);
     if (s.empty()) return COOKIE::STATUS::NAME_EMPTY;
     for (char c : s) {
         unsigned char uc = static_cast<unsigned char>(c);
@@ -329,16 +320,19 @@ constexpr COOKIE::STATUS validate_partitioned(bool secure, bool partitioned) noe
     return (partitioned && !secure) ? COOKIE::STATUS::PARTITIONED_REQUIRES_SECURE : COOKIE::STATUS::OK;
 }
 
-constexpr COOKIE::STATUS validate_secure(std::string_view same_site, bool secure) noexcept {
-    return (iequals(same_site, "none") && !secure) ? COOKIE::STATUS::SAMESITE_NONE_REQUIRES_SECURE : COOKIE::STATUS::OK;
+constexpr COOKIE::STATUS validate_secure(const std::optional<std::string>& same_site, bool secure) noexcept {
+    if(!same_site.has_value()) return COOKIE::STATUS::OK;
+    return (iequals(same_site.value(), "none") && !secure) ? COOKIE::STATUS::SAMESITE_NONE_REQUIRES_SECURE : COOKIE::STATUS::OK;
 }
 
-constexpr COOKIE::STATUS validate_same_site(std::string_view s) noexcept {
+constexpr COOKIE::STATUS validate_same_site(std::string_view& s) noexcept {
+    trim(s);
     if (iequals(s, "strict") || iequals(s, "lax") || iequals(s, "none")) return COOKIE::STATUS::OK;
     return COOKIE::STATUS::SAMESITE_INVALID;
 }
 
-constexpr COOKIE::STATUS validate_value(std::string_view s) noexcept {
+constexpr COOKIE::STATUS validate_value(std::string_view& s) noexcept {
+    trim(s);
     if (s.empty()) return COOKIE::STATUS::OK;
     if (s.front() == '"') {
         if (s.size() < 2 || s.back() != '"') return COOKIE::STATUS::VALUE_UNMATCHED_QUOTE;
@@ -354,60 +348,54 @@ constexpr COOKIE::STATUS validate_value(std::string_view s) noexcept {
 } // namespace
 
 COOKIE::STATUS slim::common::http::Cookie::set_domain(std::string_view s) noexcept {
-    std::string_view trimmed = trim(s);
-    auto e = validate_domain(trimmed);
-    if(e == COOKIE::STATUS::OK) domain = std::string(trimmed);
+    auto e = ::validate_domain(s);
+    if(e == COOKIE::STATUS::OK) domain = std::string(s);
     return e;
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_expires(std::string_view s) noexcept {
-    std::string_view trimmed = trim(s);
-    auto e = validate_expires(trimmed);
-    if(e == COOKIE::STATUS::OK) expires = std::string(trimmed);
+    auto e = ::validate_expires(s);
+    if(e == COOKIE::STATUS::OK) expires = std::string(s);
+    return e;
+}
+
+COOKIE::STATUS slim::common::http::Cookie::set_max_age(std::uint_least64_t v) noexcept {
+    auto e = ::validate_max_age(v);
+    if(e == COOKIE::STATUS::OK) max_age = v;
     return e;
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_max_age(std::string_view s) noexcept {
-    return get_max_age_value(s, max_age);
+    return ::get_max_age_value(s, max_age);
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_name(std::string_view s) noexcept {
-    std::string_view trimmed = trim(s);
-    auto e = validate_name(trimmed);
+    auto e = ::validate_name(s);
     if (e == COOKIE::STATUS::OK) {
-        // 'value' is a member std::string; it converts to string_view automatically
-        if (!::validate_cookie_size(trimmed, value))
-            return COOKIE::STATUS::COOKIE_TOO_LARGE;
-
-        name = std::string(trimmed);
+        if (!::validate_cookie_size(s, value)) return COOKIE::STATUS::COOKIE_TOO_LARGE;
+        name = std::string(s);
     }
     return e;
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_path(std::string_view s) noexcept {
-    std::string_view trimmed = trim(s);
-    auto e = validate_path(trimmed);
-    if(e == COOKIE::STATUS::OK) path = std::string(trimmed);
+    auto e = ::validate_path(s);
+    if(e == COOKIE::STATUS::OK) path = std::string(s);
     return e;
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_value(std::string_view s) noexcept {
-    std::string_view trimmed = trim(s);
-    auto e = validate_value(trimmed);
+    auto e = ::validate_value(s);
     if (e == COOKIE::STATUS::OK) {
-        // 'name' is a member std::string
-        if (!::validate_cookie_size(name, trimmed))
-            return COOKIE::STATUS::COOKIE_TOO_LARGE;
-
-        value = std::string(trimmed);
+        if (!::validate_cookie_size(name, s)) return COOKIE::STATUS::COOKIE_TOO_LARGE;
+        value = std::string(s);
     }
     return e;
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_same_site(std::string_view s) noexcept {
-    std::string_view trimmed = trim(s);
-    auto e = validate_same_site(trimmed);
-    if(e == COOKIE::STATUS::OK) same_site = std::string(trimmed);
+    auto e = ::validate_same_site(s);
+    if(e == COOKIE::STATUS::OK) same_site = std::string(s);
     return e;
 }
 
@@ -416,18 +404,27 @@ COOKIE::STATUS slim::common::http::Cookie::set_httponly(std::string_view s) noex
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_partitioned(std::string_view s) noexcept {
-    return get_bool(s, partitioned);
+    return ::get_bool(s, partitioned);
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_secure(std::string_view s) noexcept {
-    return get_bool(s, secure);
+    return ::get_bool(s, secure);
 }
 
 COOKIE::STATUS slim::common::http::Cookie::validate() const noexcept {
+    auto e = ::validate_secure(same_site, secure);
+    if(e != COOKIE::STATUS::OK) return e;
+
+    e = ::validate_partitioned(secure, partitioned);
+    if(e != COOKIE::STATUS::OK) return e;
+
+    e = ::validate_prefixes(name, domain, path, secure);
+    if(e != COOKIE::STATUS::OK) return e;
+
     return COOKIE::STATUS::OK;
 }
 
-std::string slim::common::http::Cookie::serialize() const {
+std::string slim::common::http::Cookie::serialize() const noexcept {
     std::ostringstream ss;
     ss << name << "=" << value;
     if (domain) ss << "; Domain=" << *domain;

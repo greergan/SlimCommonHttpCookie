@@ -515,6 +515,7 @@ TEST_CASE("set_partitioned rejects an invalid boolean string") {
 
 TEST_CASE("validate_secure returns no error when SameSite is Strict and Secure is false") {
     slim::common::http::Cookie c;
+    c.set_name("cookie_name");
     c.set_same_site("Strict");
     auto e = c.validate();
     REQUIRE(e == COOKIE::STATUS::OK);
@@ -531,6 +532,7 @@ TEST_CASE("validate_secure returns error when SameSite is None and Secure is fal
 
 TEST_CASE("validate_partitioned returns no error when Secure is true and Partitioned is true") {
     slim::common::http::Cookie c;
+    c.set_name("cookie_name");
     c.set_secure("true");
     c.set_partitioned("true");
     auto e = c.validate();
