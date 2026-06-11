@@ -88,9 +88,9 @@ namespace COOKIE {
 
 namespace slim::common::http {
 
-class CookieException: virtual public std::runtime_error {
+class CookieException: public std::logic_error {
     public:
-        CookieException(COOKIE::STATUS e): std::runtime_error(std::string{COOKIE::status_string(e)}) {}
+        explicit CookieException(COOKIE::STATUS e): std::logic_error("Invalid Cookie: " + std::string{COOKIE::status_string(e)}) {}
         virtual ~CookieException() throw () {}
 };
 
