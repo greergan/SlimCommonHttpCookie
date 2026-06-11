@@ -504,15 +504,18 @@ std::string slim::common::http::Cookie::serialize() const {
     result.append("Set-Cookie: ");
     result.append(name).append("=").append(value);
 
-    if (domain)      result.append("; Domain=").append(*domain);
-    if (path)        result.append("; Path=").append(*path);
-    if (expires)     result.append("; Expires=").append(*expires);
+    if (domain)              result.append("; Domain=").append(*domain);
+    if (path)                result.append("; Path=").append(*path);
+    if (!max_age && expires) result.append("; Expires=").append(*expires);
 
     if (max_age.has_value()) {
-        result.append("; Max-Age=");
         std::array<char, 20> buffer;
-        // Guaranteed to succeed because of class-level validation invariants
-        auto [ptr, _] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), *max_age);
+        auto [ptr, ec] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), *max_age);
+
+        if(ec != std::errc{})
+            throw(CookieException("Failed to serialize Max-Age: " + std::make_error_code(ec).message()));
+
+        result.append("; Max-Age=");
         result.append(buffer.data(), static_cast<std::size_t>(ptr - buffer.data()));
     }
 

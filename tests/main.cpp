@@ -1016,7 +1016,6 @@ TEST_CASE("Cookie Serialize - Complex Multi-Attribute Validation Pass", "[cookie
     std::string expected = "Set-Cookie: __Secure-user_tracker=hash_payload_alpha_9"
                            "; Domain=sub.domain.org"
                            "; Path=/"
-                           "; Expires=Tue, 19 Jan 2038 03:14:07 GMT"
                            "; Max-Age=86400"
                            "; SameSite=Strict"
                            "; Secure"
