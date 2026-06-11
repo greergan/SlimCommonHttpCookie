@@ -16,6 +16,7 @@ namespace {
 struct AsciiTables {
     std::array<char, 256> to_lower{};
     std::array<bool, 256> is_alnum{};
+    std::array<bool, 256> is_digit{};
     std::array<bool, 256> is_space{};
     std::array<bool, 256> is_cookie_char{};
     std::array<bool, 256> is_date_delimiter{};
@@ -24,6 +25,7 @@ struct AsciiTables {
         for (size_t i = 0; i < 256; ++i) {
             to_lower[i] = (i >= 'A' && i <= 'Z') ? static_cast<char>(i + 32) : static_cast<char>(i);
             is_alnum[i] = (i >= 'a' && i <= 'z') || (i >= 'A' && i <= 'Z') || (i >= '0' && i <= '9');
+            is_digit[i] = (i >= '0' && i <= '9');
             is_space[i] = (i == ' ' || i == '\t' || i == '\r' || i == '\n' || i == '\v' || i == '\f');
 
             unsigned char uc = static_cast<unsigned char>(i);
@@ -113,25 +115,33 @@ constexpr bool validate_cookie_size(std::string_view name, std::string_view valu
 constexpr COOKIE::STATUS validate_domain(std::string_view& s) noexcept {
     trim(s);
     if (s.empty()) return COOKIE::STATUS::DOMAIN_EMPTY;
-    if (s.front() == '.') s.remove_prefix(1);
+
+    // RFC 6265 §5.2.3 – strip a single leading dot, then re-check emptiness.
+    const bool had_leading_dot = (s.front() == '.');
+    if (had_leading_dot) s.remove_prefix(1);
     if (s.empty()) return COOKIE::STATUS::DOMAIN_BARE_DOT;
+
     if (s.back() == '.') return COOKIE::STATUS::DOMAIN_TRAILING_DOT;
     if (s.size() > 253) return COOKIE::STATUS::DOMAIN_TOO_LONG;
 
-    size_t label_start = 0;
-    for (size_t i = 0; i <= s.size(); ++i) {
-        if (i == s.size() || s[i] == '.') {
-            std::string_view label = s.substr(label_start, i - label_start);
-            if (label.empty()) return COOKIE::STATUS::DOMAIN_LABEL_EMPTY;
-            if (label.size() > 63) return COOKIE::STATUS::DOMAIN_LABEL_TOO_LONG;
-            if (label.front() == '-' || label.back() == '-') return COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN;
-            for (char c : label) {
-                if (!ascii.is_alnum[static_cast<unsigned char>(c)] && c != '-')
-                    return COOKIE::STATUS::DOMAIN_INVALID_CHAR;
-            }
-            label_start = i + 1;
+    for (std::string_view rem = s; !rem.empty();) {
+        const auto dot = rem.find('.');
+        const std::string_view label = rem.substr(0, dot);
+
+        if (label.empty()) return COOKIE::STATUS::DOMAIN_LABEL_EMPTY;
+        if (label.size() > 63) return COOKIE::STATUS::DOMAIN_LABEL_TOO_LONG;
+        if (label.front() == '-' || label.back() == '-') return COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN;
+
+        for (char c : label) {
+            const unsigned char uc = static_cast<unsigned char>(c);
+            if (dot == std::string_view::npos && ascii.is_digit[uc]) return COOKIE::STATUS::DOMAIN_NUMERIC_TLD;
+            if (!ascii.is_alnum[uc] && c != '-') return COOKIE::STATUS::DOMAIN_INVALID_CHAR;
         }
+
+        rem.remove_prefix(dot == std::string_view::npos ? rem.size() : dot + 1);
     }
+
+    if (had_leading_dot) s = std::string_view(s.data() - 1, s.size() + 1);
     return COOKIE::STATUS::OK;
 }
 

@@ -1024,3 +1024,84 @@ TEST_CASE("Cookie Serialize - Complex Multi-Attribute Validation Pass", "[cookie
 
     REQUIRE(cookie.serialize() == expected);
 }
+
+TEST_CASE("domain with all-digit TLD is rejected", "[domain][tld]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("example.123") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+}
+
+TEST_CASE("domain with multi-label all-digit TLD is rejected", "[domain][tld]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("foo.bar.456") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+}
+
+TEST_CASE("domain with single-digit TLD is rejected", "[domain][tld]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("test.0") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+}
+
+TEST_CASE("domain with digit-suffixed TLD is rejected", "[domain][tld]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("example.co1") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+}
+
+TEST_CASE("domain with digit-prefixed TLD is rejected", "[domain][tld]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("example.1com") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+}
+
+TEST_CASE("domain with digit embedded in TLD is rejected", "[domain][tld]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("example.c0m") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+}
+
+TEST_CASE("digits in non-TLD labels are allowed", "[domain][tld]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("sub1.example.com") == COOKIE::STATUS::OK);
+    CHECK(cookie.set_domain("123.example.com")  == COOKIE::STATUS::OK);
+    CHECK(cookie.set_domain("a1b2.foo3.com")    == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("valid alphabetic TLD is accepted", "[domain][tld]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("example.com")   == COOKIE::STATUS::OK);
+    CHECK(cookie.set_domain("example.co.uk") == COOKIE::STATUS::OK);
+    CHECK(cookie.set_domain("my-site.io")    == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("domain with leading hyphen in label is rejected", "[domain][hyphen]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("-example.com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
+}
+
+TEST_CASE("domain with trailing hyphen in label is rejected", "[domain][hyphen]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("example-.com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
+}
+
+TEST_CASE("domain with leading hyphen in subdomain is rejected", "[domain][hyphen]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("sub.-example.com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
+}
+
+TEST_CASE("domain with trailing hyphen in subdomain is rejected", "[domain][hyphen]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("sub-.example.com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
+}
+
+TEST_CASE("domain with leading hyphen in TLD is rejected", "[domain][hyphen]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("example.-com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
+}
+
+TEST_CASE("domain with trailing hyphen in TLD is rejected", "[domain][hyphen]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("example.com-") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
+}
+
+TEST_CASE("domain with hyphen in valid position is accepted", "[domain][hyphen]") {
+    slim::common::http::Cookie cookie;
+    CHECK(cookie.set_domain("my-site.com")        == COOKIE::STATUS::OK);
+    CHECK(cookie.set_domain("my-site.example.com") == COOKIE::STATUS::OK);
+    CHECK(cookie.set_domain("a-b-c.example.com")  == COOKIE::STATUS::OK);
+}
