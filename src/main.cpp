@@ -1,7 +1,9 @@
 #include <array>
 #include <charconv>
+#include <cstddef>
 #include <cstdint>
 #include <ctime>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <string>
@@ -440,8 +442,9 @@ COOKIE::STATUS slim::common::http::Cookie::validate() const noexcept {
 }
 
 std::string slim::common::http::Cookie::serialize() const noexcept {
-    // 1. Pre-calculate the exact capacity required
-    std::size_t total_size = name.size() + 1 + value.size(); // "name=value"
+    std::size_t total_size = 12;                           // "Set-Cookie: "
+    total_size += 2;                                       // end of cookie string
+    total_size += name.size() + 1 + value.size();          // "name=value"
 
     if (domain)      total_size += 9 + domain->size();       // "; Domain="
     if (path)        total_size += 7 + path->size();         // "; Path="
@@ -459,6 +462,7 @@ std::string slim::common::http::Cookie::serialize() const noexcept {
 
     std::string result;
     result.reserve(total_size);
+    result.append("Set-Cookie: ");
     result.append(name).append("=").append(value);
 
     if (domain)      result.append("; Domain=").append(*domain);
@@ -467,9 +471,10 @@ std::string slim::common::http::Cookie::serialize() const noexcept {
 
     if (max_age.has_value()) {
         result.append("; Max-Age=");
-        std::vector<char> buffer(max_age_digits);
-        if (auto [ptr, ec] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), *max_age); ec == std::errc{})
-            result.append(buffer.data());
+        std::array<char, 20> buffer;
+        // Guaranteed to succeed because of class-level validation invariants
+        auto [ptr, _] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), *max_age);
+        result.append(buffer.data(), static_cast<std::size_t>(ptr - buffer.data()));
     }
 
     if (same_site)   result.append("; SameSite=").append(*same_site);
@@ -477,5 +482,6 @@ std::string slim::common::http::Cookie::serialize() const noexcept {
     if (httponly)    result.append("; HttpOnly");
     if (partitioned) result.append("; Partitioned");
 
+    result.append("\r\n");
     return result;
 }

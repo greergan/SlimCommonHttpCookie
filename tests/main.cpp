@@ -903,3 +903,125 @@ TEST_CASE("Cookie set_value: generated sizes over boundary", "[cookie][size]") {
     const auto result = cookie.set_value(value);
     REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
+
+TEST_CASE("Cookie Serialize - Basic Name and Value", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("session") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("xyz123") == COOKIE::STATUS::OK);
+
+    std::string expected = "Set-Cookie: session=xyz123\r\n";
+    REQUIRE(cookie.serialize() == expected);
+}
+
+TEST_CASE("Cookie Serialize - With Domain Attribute", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_domain("example.com") == COOKIE::STATUS::OK);
+
+    std::string expected = "Set-Cookie: id=42; Domain=example.com\r\n";
+    REQUIRE(cookie.serialize() == expected);
+}
+
+TEST_CASE("Cookie Serialize - With Path Attribute", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_path("/api") == COOKIE::STATUS::OK);
+
+    std::string expected = "Set-Cookie: id=42; Path=/api\r\n";
+    REQUIRE(cookie.serialize() == expected);
+}
+
+TEST_CASE("Cookie Serialize - With Expires Attribute", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_expires("Wed, 21 Oct 2015 07:28:00 GMT") == COOKIE::STATUS::OK);
+
+    std::string expected = "Set-Cookie: id=42; Expires=Wed, 21 Oct 2015 07:28:00 GMT\r\n";
+    REQUIRE(cookie.serialize() == expected);
+}
+
+TEST_CASE("Cookie Serialize - With SameSite Attribute", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_same_site("Lax") == COOKIE::STATUS::OK);
+
+    std::string expected = "Set-Cookie: id=42; SameSite=Lax\r\n";
+    REQUIRE(cookie.serialize() == expected);
+}
+
+TEST_CASE("Cookie Serialize - With Boolean Security Flags", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
+
+    cookie.set_secure(true);
+    cookie.set_httponly(true);
+    cookie.set_partitioned(true);
+
+    std::string expected = "Set-Cookie: id=42; Secure; HttpOnly; Partitioned\r\n";
+    REQUIRE(cookie.serialize() == expected);
+}
+
+TEST_CASE("Cookie Serialize - Single Digit Max-Age", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("timeout") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("active") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_max_age(0) == COOKIE::STATUS::OK);
+
+    std::string expected = "Set-Cookie: timeout=active; Max-Age=0\r\n";
+    REQUIRE(cookie.serialize() == expected);
+}
+
+TEST_CASE("Cookie Serialize - Multi Digit Max-Age", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("timeout") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("active") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_max_age(3600) == COOKIE::STATUS::OK);
+
+    std::string expected = "Set-Cookie: timeout=active; Max-Age=3600\r\n";
+    REQUIRE(cookie.serialize() == expected);
+}
+
+TEST_CASE("Cookie Serialize - Large Max-Age String Input", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("timeout") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("active") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_max_age("31536000") == COOKIE::STATUS::OK);
+
+    std::string expected = "Set-Cookie: timeout=active; Max-Age=31536000\r\n";
+    REQUIRE(cookie.serialize() == expected);
+}
+
+TEST_CASE("Cookie Serialize - Complex Multi-Attribute Validation Pass", "[cookie][serialize]") {
+    slim::common::http::Cookie cookie;
+    REQUIRE(cookie.set_name("__Secure-user_tracker") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_value("hash_payload_alpha_9") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_domain("sub.domain.org") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_path("/") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_expires("Tue, 19 Jan 2038 03:14:07 GMT") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_max_age(86400) == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_same_site("Strict") == COOKIE::STATUS::OK);
+
+    cookie.set_secure(true);
+    cookie.set_httponly(true);
+    cookie.set_partitioned(true);
+
+    // Explicit structural cross-validation check pass
+    REQUIRE(cookie.validate() == COOKIE::STATUS::OK);
+
+    std::string expected = "Set-Cookie: __Secure-user_tracker=hash_payload_alpha_9"
+                           "; Domain=sub.domain.org"
+                           "; Path=/"
+                           "; Expires=Tue, 19 Jan 2038 03:14:07 GMT"
+                           "; Max-Age=86400"
+                           "; SameSite=Strict"
+                           "; Secure"
+                           "; HttpOnly"
+                           "; Partitioned\r\n";
+
+    REQUIRE(cookie.serialize() == expected);
+}
