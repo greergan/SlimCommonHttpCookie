@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <array>
@@ -87,6 +88,12 @@ namespace COOKIE {
 
 namespace slim::common::http {
 
+class CookieException: virtual public std::runtime_error {
+    public:
+        CookieException(COOKIE::STATUS e): std::runtime_error(std::string{COOKIE::status_string(e)}) {}
+        virtual ~CookieException() throw () {}
+};
+
 class Cookie {
     public:
         Cookie() = default;
@@ -135,7 +142,7 @@ class Cookie {
         bool get_secure() const noexcept { return secure; };
 
         COOKIE::STATUS validate() const noexcept;
-        std::string serialize() const noexcept;
+        std::string serialize() const;
 
     private:
         std::string                name;

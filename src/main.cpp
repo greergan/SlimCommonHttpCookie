@@ -441,7 +441,10 @@ COOKIE::STATUS slim::common::http::Cookie::validate() const noexcept {
     return COOKIE::STATUS::OK;
 }
 
-std::string slim::common::http::Cookie::serialize() const noexcept {
+std::string slim::common::http::Cookie::serialize() const {
+    auto e = validate();
+    if(e != COOKIE::STATUS::OK) throw(CookieException(e));
+
     std::size_t total_size = 12;                           // "Set-Cookie: "
     total_size += 2;                                       // end of cookie string
     total_size += name.size() + 1 + value.size();          // "name=value"
