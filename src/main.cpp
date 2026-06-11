@@ -64,11 +64,6 @@ constexpr bool iequals(std::string_view a, std::string_view b) noexcept {
     return true;
 }
 
-constexpr bool istarts_with(std::string_view s, std::string_view prefix) noexcept {
-    if (s.size() < prefix.size()) return false;
-    return iequals(s.substr(0, prefix.size()), prefix);
-}
-
 constexpr void trim(std::string_view& s) noexcept {
     while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.front())]) s.remove_prefix(1);
     while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.back())]) s.remove_suffix(1);
