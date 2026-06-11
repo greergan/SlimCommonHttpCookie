@@ -288,11 +288,11 @@ TEST_CASE("set_expires trims leading and trailing whitespace before storing") {
     REQUIRE(c.get_expires() == "Thu, 01 Jan 2099 00:00:00 GMT");
 }
 
-TEST_CASE("set_expires stores a valid asctime date with a single-digit day") {
+TEST_CASE("set_expires translates a valid asctime date with a single-digit day") {
     slim::common::http::Cookie c;
     COOKIE::STATUS e = c.set_expires("Thu Jan  1 12:30:00 2099");
     REQUIRE(e == COOKIE::STATUS::OK);
-    REQUIRE(c.get_expires() == "Thu Jan  1 12:30:00 2099");
+    REQUIRE(c.get_expires() == "Thu, 01 Jan 2099 12:30:00 GMT");
 }
 
 // ---------------------------------------------------------------------------

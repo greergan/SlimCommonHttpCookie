@@ -136,18 +136,19 @@ constexpr COOKIE::STATUS validate_domain(std::string_view& s) noexcept {
     return COOKIE::STATUS::OK;
 }
 
-constexpr COOKIE::STATUS validate_expires(std::string_view& s) noexcept {
+constexpr COOKIE::STATUS validate_expires(std::string_view& s, std::optional<std::string>& expires) noexcept {
 	// RFC 6265 §5.1.1 cookie-date algorithm.
-	// Tokenises on the RFC delimiter set; tries each token as
-	// time → day-of-month → month → year (first-match semantics,
-	// one slot per field type); then validates all ranges.
+	// RFC 1123 "Sun, 06 Nov 1994 08:49:37 GMT"
+	// RFC 850  "Weekday, DD-Mon-YY HH:MM:SS GMT"
+	// ANSI C asctime "Wdy Mon DD HH:MM:SS YYYY"
+	// if the date is valid it stores it as RFC 1123 format
 
 	trim(s);
 
 	bool found_time  = false, found_dom  = false;
 	bool found_month = false, found_year = false;
 	int  hour = 0, minute = 0, second = 0;
-	int  day  = 0, year   = 0;
+	int  day  = 0, month = 0,  year   = 0;
 
 	std::size_t pos = 0;
 
@@ -217,8 +218,8 @@ constexpr COOKIE::STATUS validate_expires(std::string_view& s) noexcept {
 
 		// 3) month = ( "jan" | "feb" | … ) [*OCTET]
 		if (!found_month && len >= 3) {
-			const int m = month_abbr_to_int(s.substr(tok_start, len));
-			if (m != -1) {
+			month = month_abbr_to_int(s.substr(tok_start, len));
+			if (month != -1) {
 				found_month = true;
 				if (found_time & found_dom & found_year) break;
 				continue;
@@ -257,7 +258,44 @@ constexpr COOKIE::STATUS validate_expires(std::string_view& s) noexcept {
 	    || minute      > 59             // step 12
 	    || second      > 59)            // step 13
 		return COOKIE::STATUS::EXPIRES_INVALID_FORMAT;
-	// month is always 1-12 by construction (month_abbr_to_int guarantees it)
+
+	// ── format into RFC 1123 ───────────────────────────────────────
+	constexpr const char* wday_name[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+	constexpr const char* mon_name[]  = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+	// Tomohiko Sakamoto's algorithm for day of week
+	const int y_calc = year - (month < 2 ? 1 : 0);
+	constexpr int t[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+	const int wday = (y_calc + y_calc/4 - y_calc/100 + y_calc/400 + t[month] + day) % 7;
+
+	expires.emplace();
+	expires->reserve(29); // Exact length of "Wdy, DD Mon YYYY HH:MM:SS GMT"
+
+	expires->append(wday_name[wday]).append(", ");
+
+	expires->push_back(static_cast<char>('0' + (day / 10)));
+	expires->push_back(static_cast<char>('0' + (day % 10)));
+
+	expires->append(" ").append(mon_name[month]).append(" ");
+
+	expires->push_back(static_cast<char>('0' + (year / 1000)));
+	expires->push_back(static_cast<char>('0' + ((year / 100) % 10)));
+	expires->push_back(static_cast<char>('0' + ((year / 10) % 10)));
+	expires->push_back(static_cast<char>('0' + (year % 10)));
+
+	expires->append(" ");
+	expires->push_back(static_cast<char>('0' + (hour / 10)));
+	expires->push_back(static_cast<char>('0' + (hour % 10)));
+
+	expires->append(":");
+	expires->push_back(static_cast<char>('0' + (minute / 10)));
+	expires->push_back(static_cast<char>('0' + (minute % 10)));
+
+	expires->append(":");
+	expires->push_back(static_cast<char>('0' + (second / 10)));
+	expires->push_back(static_cast<char>('0' + (second % 10)));
+
+	expires->append(" GMT");
 
 	return COOKIE::STATUS::OK;
 }
@@ -371,9 +409,7 @@ COOKIE::STATUS slim::common::http::Cookie::set_domain(std::string_view s) noexce
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_expires(std::string_view s) noexcept {
-    auto e = ::validate_expires(s);
-    if(e == COOKIE::STATUS::OK) expires = std::string(s);
-    return e;
+    return ::validate_expires(s, expires);
 }
 
 COOKIE::STATUS slim::common::http::Cookie::set_max_age(std::uint_least64_t v) noexcept {
