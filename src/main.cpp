@@ -3,12 +3,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
-#include <iterator>
+#include <iterator> // used for error handling
 #include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include <slim/common/http/cookie.h>
 
