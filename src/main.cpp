@@ -1,9 +1,12 @@
+#include <array>
 #include <charconv>
+#include <cstdint>
 #include <ctime>
+#include <limits>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <slim/common/http/cookie.h>
 
@@ -41,11 +44,23 @@ struct AsciiTables {
 
 constexpr AsciiTables ascii{};
 
+constexpr std::size_t count_digits(std::uint_least64_t n) noexcept {
+    if (n == 0) return 1;
+    std::size_t digits = 0;
+    // Fast unrolled structural checks for typical cookie lifespans
+    if (n >= 1000000000000000000ULL) { digits += 18; n /= 1000000000000000000ULL; }
+    if (n >= 1000000000ULL)          { digits += 9;  n /= 1000000000ULL; }
+    if (n >= 100000ULL)              { digits += 5;  n /= 100000ULL; }
+    if (n >= 100ULL)                 { digits += 2;  n /= 100ULL; }
+    if (n >= 10ULL)                  { digits += 1;  n /= 10ULL; }
+    return digits + 1;
+}
+
 constexpr bool iequals(std::string_view a, std::string_view b) noexcept {
     if (a.size() != b.size()) return false;
-    for (size_t i = 0; i < a.size(); ++i) {
+    for (size_t i = 0; i < a.size(); ++i)
         if (ascii.to_lower[static_cast<unsigned char>(a[i])] != static_cast<unsigned char>(b[i])) return false;
-    }
+
     return true;
 }
 
@@ -430,15 +445,42 @@ COOKIE::STATUS slim::common::http::Cookie::validate() const noexcept {
 }
 
 std::string slim::common::http::Cookie::serialize() const noexcept {
-    std::ostringstream ss;
-    ss << name << "=" << value;
-    if (domain) ss << "; Domain=" << *domain;
-    if (path) ss << "; Path=" << *path;
-    if (expires) ss << "; Expires=" << *expires;
-    if (max_age) ss << "; Max-Age=" << *max_age;
-    if (same_site) ss << "; SameSite=" << *same_site;
-    if (secure) ss << "; Secure";
-    if (httponly) ss << "; HttpOnly";
-    if (partitioned) ss << "; Partitioned";
-    return ss.str();
+    // 1. Pre-calculate the exact capacity required
+    std::size_t total_size = name.size() + 1 + value.size(); // "name=value"
+
+    if (domain)      total_size += 9 + domain->size();       // "; Domain="
+    if (path)        total_size += 7 + path->size();         // "; Path="
+    if (expires)     total_size += 10 + expires->size();     // "; Expires="
+    if (same_site)   total_size += 11 + same_site->size();   // "; SameSite="
+    if (secure)      total_size += 8;                        // "; Secure"
+    if (httponly)    total_size += 10;                       // "; HttpOnly"
+    if (partitioned) total_size += 13;                       // "; Partitioned"
+
+    std::size_t max_age_digits = 0;
+    if (max_age.has_value()) {
+        max_age_digits = ::count_digits(*max_age);
+        total_size += 10 + max_age_digits;                     // "; Max-Age=" + digits
+    }
+
+    std::string result;
+    result.reserve(total_size);
+    result.append(name).append("=").append(value);
+
+    if (domain)      result.append("; Domain=").append(*domain);
+    if (path)        result.append("; Path=").append(*path);
+    if (expires)     result.append("; Expires=").append(*expires);
+
+    if (max_age.has_value()) {
+        result.append("; Max-Age=");
+        std::vector<char> buffer(max_age_digits);
+        if (auto [ptr, ec] = std::to_chars(buffer.data(), buffer.data() + buffer.size(), *max_age); ec == std::errc{})
+            result.append(buffer.data());
+    }
+
+    if (same_site)   result.append("; SameSite=").append(*same_site);
+    if (secure)      result.append("; Secure");
+    if (httponly)    result.append("; HttpOnly");
+    if (partitioned) result.append("; Partitioned");
+
+    return result;
 }
