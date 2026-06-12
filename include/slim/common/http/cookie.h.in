@@ -49,36 +49,36 @@ namespace COOKIE {
 
     namespace detail {
         constexpr std::array<std::string_view, static_cast<std::size_t>(STATUS::_COUNT)> status_strings = {
-            "OK",
-            "COOKIE_TOO_LARGE",
-            "DOMAIN_BARE_DOT",
-            "DOMAIN_EMPTY",
-            "DOMAIN_INVALID_CHAR",
-            "DOMAIN_LABEL_EMPTY",
-            "DOMAIN_LABEL_INVALID_HYPHEN",
-            "DOMAIN_LABEL_TOO_LONG",
-            "DOMAIN_NUMERIC_TLD",
-            "DOMAIN_TOO_LONG",
-            "DOMAIN_TRAILING_DOT",
-            "EXPIRES_INVALID_FORMAT",
-            "INVALID_BOOLEAN",
-            "MAX_AGE_EMPTY",
-            "MAX_AGE_EXCEEDS_LIMIT",
-            "MAX_AGE_INVALID_FORMAT",
-            "MAX_AGE_TRAILING_CHARS",
-            "NAME_EMPTY",
-            "NAME_HOST_PREFIX_HAS_DOMAIN",
-            "NAME_HOST_PREFIX_INVALID_PATH",
-            "NAME_INVALID_CHAR",
-            "NAME_PREFIX_REQUIRES_SECURE",
-            "PARTITIONED_REQUIRES_SAME_SITE_NONE",
-            "PARTITIONED_REQUIRES_SECURE",
-            "PATH_INVALID_CHAR",
-            "PATH_MISSING_LEADING_SLASH",
-            "SAMESITE_INVALID",
-            "SAMESITE_NONE_REQUIRES_SECURE",
-            "VALUE_INVALID_CHAR",
-            "VALUE_UNMATCHED_QUOTE"
+            "OK",                                                          // OK
+            "Cookie exceeds the maximum allowed size",                     // COOKIE_TOO_LARGE
+            "Domain cannot consist of a bare dot",                         // DOMAIN_BARE_DOT
+            "Domain name cannot be empty",                                 // DOMAIN_EMPTY
+            "Domain contains an invalid character",                        // DOMAIN_INVALID_CHAR
+            "Domain label cannot be empty",                                // DOMAIN_LABEL_EMPTY
+            "Domain label has a hyphen in an invalid position",            // DOMAIN_LABEL_INVALID_HYPHEN
+            "Domain label exceeds the maximum allowed length",             // DOMAIN_LABEL_TOO_LONG
+            "Top-level domain (TLD) must not be numeric",                  // DOMAIN_NUMERIC_TLD
+            "Domain name exceeds the maximum allowed length",              // DOMAIN_TOO_LONG
+            "Domain name must not end with a trailing dot",                // DOMAIN_TRAILING_DOT
+            "Expires attribute has an invalid date format",                // EXPIRES_INVALID_FORMAT
+            "Expected a valid boolean value",                              // INVALID_BOOLEAN
+            "Max-Age attribute cannot be empty",                           // MAX_AGE_EMPTY
+            "Max-Age value exceeds the maximum allowed limit",             // MAX_AGE_EXCEEDS_LIMIT
+            "Max-Age attribute has an invalid format",                     // MAX_AGE_INVALID_FORMAT
+            "Max-Age value has unexpected trailing characters",            // MAX_AGE_TRAILING_CHARS
+            "Cookie name cannot be empty",                                 // NAME_EMPTY
+            "The __Host- prefix cannot be combined with a Domain attribute", // NAME_HOST_PREFIX_HAS_DOMAIN
+            "The __Host- prefix requires the Path attribute to be '/'",    // NAME_HOST_PREFIX_INVALID_PATH
+            "Cookie name contains an invalid character",                   // NAME_INVALID_CHAR
+            "Cookie name prefix requires the Secure attribute",            // NAME_PREFIX_REQUIRES_SECURE
+            "Partitioned cookies require SameSite=None",                   // PARTITIONED_REQUIRES_SAME_SITE_NONE
+            "Partitioned cookies require the Secure attribute",            // PARTITIONED_REQUIRES_SECURE
+            "Path contains an invalid character",                          // PATH_INVALID_CHAR
+            "Path must begin with a forward slash ('/')",                  // PATH_MISSING_LEADING_SLASH
+            "SameSite attribute has an invalid value",                     // SAMESITE_INVALID
+            "SameSite=None requires the Secure attribute",                 // SAMESITE_NONE_REQUIRES_SECURE
+            "Cookie value contains an invalid character",                  // VALUE_INVALID_CHAR
+            "Cookie value has an unmatched quotation mark",                // VALUE_UNMATCHED_QUOTE
         };
     }
 
