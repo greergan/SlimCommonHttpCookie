@@ -1,7 +1,7 @@
 # SlimCommonHTTPCookie
 
 A lightweight, RFC6265-oriented HTTP cookie implementation in modern C++.  
-Designed for use in [SlimTS](https://github.com/greergan/SlimTS)
+Designed for use in [SlimTS](https://github.com/greergan/SlimTS). Acts as a validating, backing store for SlimTS's Javascript Cookie object.
 
 ## Overview
 
@@ -23,9 +23,11 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 | Domain validation | Full label + length + syntax checks |
 | Expires parsing | RFC 6265 cookie-date tokenizer stored as RFC 1123 format|
 | Max-Age support | String + integer parsing with overflow checks |
+| Partitioned | CHIPS validation enforced on outgoing requests |  
 | SameSite handling | strict / lax / none validation |
 | Secure / HttpOnly / Partitioned | Boolean attribute parsing |
 | Serialize | Preallocated, zero-fragment string build |
+| Serialize | Cookie validation with thown exceptions |  
 | Error model | Strong enum-based status reporting |
 
 ## Core API

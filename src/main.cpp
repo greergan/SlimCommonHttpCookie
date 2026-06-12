@@ -335,7 +335,8 @@ constexpr COOKIE::STATUS validate_prefixes(std::string_view name, const std::opt
 }
 
 constexpr COOKIE::STATUS validate_max_age(std::uint_least64_t v) noexcept {
-    return (v > static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max())) ? COOKIE::STATUS::MAX_AGE_EXCEEDS_LIMIT : COOKIE::STATUS::OK;
+    return (v > static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max()))
+        ? COOKIE::STATUS::MAX_AGE_EXCEEDS_LIMIT : COOKIE::STATUS::OK;
 }
 
 constexpr COOKIE::STATUS get_max_age_value(std::string_view& s, std::optional<std::uint_least64_t>& v) noexcept {
@@ -380,8 +381,13 @@ constexpr COOKIE::STATUS validate_name(std::string_view& s) noexcept {
     return COOKIE::STATUS::OK;
 }
 
-constexpr COOKIE::STATUS validate_partitioned(bool secure, bool partitioned) noexcept {
-    return (partitioned && !secure) ? COOKIE::STATUS::PARTITIONED_REQUIRES_SECURE : COOKIE::STATUS::OK;
+constexpr COOKIE::STATUS validate_partitioned(bool partitioned, bool secure,
+    const std::optional<std::string>& same_site) noexcept {
+    if(partitioned) {
+        if(!secure) return COOKIE::STATUS::PARTITIONED_REQUIRES_SECURE;
+        if(!same_site || !iequals(*same_site, "none")) return COOKIE::STATUS::PARTITIONED_REQUIRES_SAME_SITE_NONE;
+    }
+    return COOKIE::STATUS::OK;
 }
 
 constexpr COOKIE::STATUS validate_secure(const std::optional<std::string>& same_site, bool secure) noexcept {
@@ -477,7 +483,7 @@ COOKIE::STATUS slim::common::http::Cookie::validate() const noexcept {
     auto e = ::validate_secure(same_site, secure);
     if(e != COOKIE::STATUS::OK) return e;
 
-    e = ::validate_partitioned(secure, partitioned);
+    e = ::validate_partitioned(partitioned, secure, same_site);
     if(e != COOKIE::STATUS::OK) return e;
 
     e = ::validate_prefixes(name, domain, path, secure);

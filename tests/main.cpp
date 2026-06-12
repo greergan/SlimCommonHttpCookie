@@ -561,13 +561,24 @@ TEST_CASE("validate_secure returns error when SameSite is None and Secure is fal
     REQUIRE(e != COOKIE::STATUS::OK);
 }
 
-TEST_CASE("validate_partitioned returns no error when Secure is true and Partitioned is true") {
+TEST_CASE("validate_partitioned returns no error when SameSite==None and Secure is true and Partitioned is true") {
     slim::common::http::Cookie c;
     c.set_name("cookie_name");
     c.set_secure("true");
     c.set_partitioned("true");
+    c.set_same_site("NONE");
     auto e = c.validate();
     REQUIRE(e == COOKIE::STATUS::OK);
+}
+
+TEST_CASE("validate_partitioned returns error when SameSite!=None and Secure is true and Partitioned is true") {
+    slim::common::http::Cookie c;
+    c.set_name("cookie_name");
+    c.set_secure("true");
+    c.set_partitioned("true");
+    c.set_same_site("lax");
+    auto e = c.validate();
+    REQUIRE(e != COOKIE::STATUS::OK);
 }
 
 TEST_CASE("validate_partitioned returns error when Partitioned is true but Secure is false") {
@@ -957,12 +968,13 @@ TEST_CASE("Cookie Serialize - With Boolean Security Flags", "[cookie][serialize]
     slim::common::http::Cookie cookie;
     REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
     REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_same_site("none") == COOKIE::STATUS::OK);
 
     cookie.set_secure(true);
     cookie.set_httponly(true);
     cookie.set_partitioned(true);
 
-    std::string expected = "Set-Cookie: id=42; Secure; HttpOnly; Partitioned\r\n";
+    std::string expected = "Set-Cookie: id=42; SameSite=none; Secure; HttpOnly; Partitioned\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
@@ -1004,7 +1016,7 @@ TEST_CASE("Cookie Serialize - Complex Multi-Attribute Validation Pass", "[cookie
     REQUIRE(cookie.set_path("/") == COOKIE::STATUS::OK);
     REQUIRE(cookie.set_expires("Tue, 19 Jan 2038 03:14:07 GMT") == COOKIE::STATUS::OK);
     REQUIRE(cookie.set_max_age(86400) == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_same_site("Strict") == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_same_site("None") == COOKIE::STATUS::OK);
 
     cookie.set_secure(true);
     cookie.set_httponly(true);
@@ -1017,7 +1029,7 @@ TEST_CASE("Cookie Serialize - Complex Multi-Attribute Validation Pass", "[cookie
                            "; Domain=sub.domain.org"
                            "; Path=/"
                            "; Max-Age=86400"
-                           "; SameSite=Strict"
+                           "; SameSite=None"
                            "; Secure"
                            "; HttpOnly"
                            "; Partitioned\r\n";
