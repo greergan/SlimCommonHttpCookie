@@ -91,14 +91,36 @@ Outputs a fully formatted `Set-Cookie` header string.
 ## Example
 
 ```cpp
-slim::common::http::Cookie c;
+    slim::common::http::Cookie c;
 
-c.set_name("session");
-c.set_value("abc123");
-c.set_path("/");
-c.set_secure("true");
+    COOKIE::STATUS e = c.set_name("session");
+    if(e != COOKIE::STATUS::OK) return e;
 
-if (c.validate() == COOKIE::STATUS::OK) {
-    auto header = c.serialize();
-}
+    e = c.set_value("abc123");
+    if(e != COOKIE::STATUS::OK) return e;
+
+    e = c.set_path("/");
+    if(e != COOKIE::STATUS::OK) return e;
+
+    e = c.set_secure(true);
+    if(e != COOKIE::STATUS::OK) return e;
+```
+
+```cpp
+    slim::common::http::Cookie c;
+    
+    c.set_name("session");
+    c.set_value("abc123");
+    c.set_path("/");
+    c.set_secure("true");
+    
+    try {
+        auto header = c.serialize();
+    }
+    catch (const slim::common::http::CookieException& e) {
+        std::cerr << "Cookie serialization failed: " << e.what() << '\n';
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Unexpected error: " << e.what() << '\n';
+    }
 ```
