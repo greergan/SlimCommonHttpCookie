@@ -839,3 +839,107 @@ TEST_CASE("domain with hyphen in valid position is accepted", "[domain][hyphen]"
     CHECK(cookie.set_domain("my-site.example.com") == COOKIE::STATUS::OK);
     CHECK(cookie.set_domain("a-b-c.example.com")  == COOKIE::STATUS::OK);
 }
+
+// Base overhead: 12 ("Set-Cookie: ") + 2 ("\r\n") + 1 ("=") = 15
+// With name "a" (1 byte): 16 bytes fixed, leaving 4080 for value before hitting 4096
+
+TEST_CASE("Cookie exactly at 4096 bytes does not throw") {
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4080, 'x'));   // 16 + 4080 = 4096
+    REQUIRE_NOTHROW(c.serialize());
+}
+
+TEST_CASE("Cookie one byte over 4096 throws") {
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4081, 'x'));   // 16 + 4081 = 4097
+    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie over limit throws CookieException with COOKIE_TOO_LARGE message") {
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4081, 'x'));
+    try {
+        c.serialize();
+        FAIL("Expected CookieException was not thrown");
+    } catch (const slim::common::http::CookieException& ex) {
+        REQUIRE(std::string(ex.what()).find(COOKIE::status_string(COOKIE::STATUS::COOKIE_TOO_LARGE)) != std::string::npos);
+    }
+}
+
+TEST_CASE("Cookie pushed over limit by Domain attribute throws") {
+    // 16 + 4071 + 9 ("; Domain=") + 1 = 4097
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4071, 'x'));
+    c.set_domain("z");
+    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie pushed over limit by Path attribute throws") {
+    // 16 + 4073 + 7 ("; Path=") + 1 = 4097
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4073, 'x'));
+    c.set_path("/");
+    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie pushed over limit by Max-Age attribute throws") {
+    // 16 + 4070 + 10 ("; Max-Age=") + 1 (digit) = 4097
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4070, 'x'));
+    c.set_max_age(1);
+    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie pushed over limit by SameSite attribute throws") {
+    // 16 + 4069 + 11 ("; SameSite=") + 1 = 4097
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4069, 'x'));
+    c.set_same_site("Lax");
+    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie pushed over limit by Secure flag throws") {
+    // 16 + 4072 + 8 ("; Secure") = 4096 — still OK
+    // 16 + 4073 + 8 = 4097 — throws
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4073, 'x'));
+    c.set_secure(true);
+    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie pushed over limit by HttpOnly flag throws") {
+    // 16 + 4070 + 10 ("; HttpOnly") = 4096 — still OK
+    // 16 + 4071 + 10 = 4097 — throws
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4071, 'x'));
+    c.set_httponly(true);
+    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie pushed over limit by Partitioned flag throws") {
+    // "; Secure" (8) + "; SameSite=None" (15) + "; Partitioned" (13) = 36
+    // 16 + value + 36 = 4097 → value = 4045
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(4045, 'x'));
+    c.set_secure(true);
+    c.set_same_site("None");
+    c.set_partitioned(true);
+    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+}
+
+TEST_CASE("Massively oversized cookie throws") {
+    slim::common::http::Cookie c;
+    c.set_name("a");
+    c.set_value(std::string(8192, 'x'));
+    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+}
