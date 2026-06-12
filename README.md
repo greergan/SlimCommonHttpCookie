@@ -1,6 +1,7 @@
 # SlimCommonHTTPCookie
 
-A lightweight, RFC6265-oriented HTTP cookie implementation in modern C++.
+A lightweight, RFC6265-oriented HTTP cookie implementation in modern C++.  
+Designed for use in [SlimTS](https://github.com/greergan/SlimTS)
 
 ## Overview
 
@@ -12,6 +13,7 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 - Strict parsing over permissive recovery
 - Explicit validation at each setter
 - Minimal runtime overhead in hot paths
+- Heavy use of `noexcept`
 
 ## Features
 
@@ -19,7 +21,7 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 |--------|-------------|
 | Name/Value validation | Strict RFC-style character filtering |
 | Domain validation | Full label + length + syntax checks |
-| Expires parsing | RFC 6265 cookie-date tokenizer |
+| Expires parsing | RFC 6265 cookie-date tokenizer stored as RFC 1123 format|
 | Max-Age support | String + integer parsing with overflow checks |
 | SameSite handling | strict / lax / none validation |
 | Secure / HttpOnly / Partitioned | Boolean attribute parsing |
@@ -38,35 +40,35 @@ slim::common::http::Cookie c;
 
 | Method | Description |
 |--------|-------------|
-| `COOKIE::STATUS set_name(std::string_view)` | Set cookie name (validated) |
-| `COOKIE::STATUS set_value(std::string_view)` | Set cookie value (validated) |
-| `COOKIE::STATUS set_domain(std::string_view)` | Set domain with RFC checks |
-| `COOKIE::STATUS set_path(std::string_view)` | Set path (must start with `/`) |
-| `COOKIE::STATUS set_expires(std::string_view)` | Set expiry string (RFC parser) |
-| `COOKIE::STATUS set_max_age(std::uint_least64_t)` | Set Max-Age |
-| `COOKIE::STATUS set_max_age(std::string_view)` | Set Max-Age |
-| `COOKIE::STATUS set_same_site(std::string_view)` | Set SameSite policy |
-| `void set_secure(bool)` | Set Secure flag |
-| `COOKIE::STATUS set_secure(std::string_view)` | Set Secure flag |
-| `void set_httponly(bool)` | Set HttpOnly flag |
-| `COOKIE::STATUS set_httponly(std::string_view)` | Set HttpOnly flag |
-| `void set_partitioned(bool)` | Set Partitioned flag |
-| `COOKIE::STATUS set_partitioned(std::string_view)` | Set Partitioned flag |
+| `COOKIE::STATUS set_name(std::string_view) noexcept;` | Set cookie name (validated) |
+| `COOKIE::STATUS set_value(std::string_view) noexcept;` | Set cookie value (validated) |
+| `COOKIE::STATUS set_domain(std::string_view) noexcept;` | Set domain with RFC checks |
+| `COOKIE::STATUS set_path(std::string_view) noexcept;` | Set path (must start with `/`) |
+| `COOKIE::STATUS set_expires(std::string_view) noexcept;` | Set expiry string (RFC parser) |
+| `COOKIE::STATUS set_max_age(std::uint_least64_t) noexcept;` | Set Max-Age |
+| `COOKIE::STATUS set_max_age(std::string_view) noexcept;` | Set Max-Age |
+| `COOKIE::STATUS set_same_site(std::string_view) noexcept;` | Set SameSite policy |
+| `void set_secure(bool) noexcept;` | Set Secure flag |
+| `COOKIE::STATUS set_secure(std::string_view) noexcept;` | Set Secure flag |
+| `void set_httponly(bool) noexcept;` | Set HttpOnly flag |
+| `COOKIE::STATUS set_httponly(std::string_view) noexcept;` | Set HttpOnly flag |
+| `void set_partitioned(bool) noexcept;` | Set Partitioned flag |
+| `COOKIE::STATUS set_partitioned(std::string_view) noexcept;` | Set Partitioned flag |
 
 ### Getters
 
 | Method | Returns |
 |--------|--------|
-| `std::string get_name()` | cookie name |
-| `std::string get_value()` | cookie value |
-| `std::optional<std::string> get_domain()` | optional domain |
-| `std::optional<std::string> get_path()` | optional path |
-| `std::optional<std::string> get_expires()` | optional expires |
-| `std::optional<std::uint_least64_t> get_max_age()` | optional max-age |
-| `std::optional<std::string> get_same_site()` | optional samesite |
-| `bool get_secure()` | secure (default=false) |
-| `bool get_httponly()` | httponly (default=false) |
-| `bool get_partitioned()` | partitioned (default=false) |
+| `std::string get_name() const noexcept;` | cookie name |
+| `std::string get_value() const noexcept;` | cookie value |
+| `std::optional<std::string> get_domain() const noexcept;` | optional domain |
+| `std::optional<std::string> get_path() const noexcept;` | optional path |
+| `std::optional<std::string> get_expires() const noexcept;` | optional expires |
+| `std::optional<std::uint_least64_t> get_max_age() const noexcept;` | optional max-age |
+| `std::optional<std::string> get_same_site() const noexcept;` | optional samesite |
+| `bool get_secure() const noexcept;` | secure (default=false) |
+| `bool get_httponly() const noexcept;` | httponly (default=false) |
+| `bool get_partitioned() const noexcept;` | partitioned (default=false) |
 
 ### Validation
 
@@ -83,7 +85,7 @@ Checks:
 ### Serialization
 
 ```cpp
-std::string Cookie::serialize() const noexcept;
+std::string Cookie::serialize() const;
 ```
 
 Outputs a fully formatted `Set-Cookie` header string.
