@@ -625,8 +625,7 @@ TEST_CASE("Cookie set_name and set_value: at maximum allowed size", "[cookie][si
 TEST_CASE("Cookie set_name and set_value: realistic cookie", "[cookie][size]") {
     slim::common::http::Cookie cookie;
     const auto name_result = cookie.set_name("session_id");
-    const auto value_result =
-        cookie.set_value("abc123def456ghi789jkl012mno345pqr678stu901vwx234yz");
+    const auto value_result = cookie.set_value("abc123def456ghi789jkl012mno345pqr678stu901vwx234yz");
     REQUIRE(name_result == COOKIE::STATUS::OK);
     REQUIRE(value_result == COOKIE::STATUS::OK);
 }
@@ -636,104 +635,6 @@ TEST_CASE("Cookie set_value: special characters", "[cookie][size]") {
     const std::string value(4096, '\x42');   // all 'B'
     const auto result = cookie.set_value(value);
     REQUIRE(result == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("Cookie set_name: name exceeds maximum size", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const std::string name(4097, 'n');
-    const auto result = cookie.set_name(name);
-    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
-}
-
-TEST_CASE("Cookie set_value: value exceeds maximum size", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const std::string value(4097, 'v');
-    const auto result = cookie.set_value(value);
-    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
-}
-
-TEST_CASE("Cookie set_name: significantly over maximum", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const std::string name(8192, 'x');
-    const auto result = cookie.set_name(name);
-    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
-}
-
-TEST_CASE("Cookie set_value: significantly over maximum", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const std::string value(8192, 'y');
-    const auto result = cookie.set_value(value);
-    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
-}
-
-TEST_CASE("Cookie set_name: extremely large name", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const std::string name(1000000, 'z');
-    const auto result = cookie.set_name(name);
-    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
-}
-
-TEST_CASE("Cookie set_value: extremely large value", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const std::string value(1000000, 'z');
-    const auto result = cookie.set_value(value);
-    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
-}
-
-TEST_CASE("Cookie set_name: boundary test at 4096", "[cookie][size]") {
-    slim::common::http::Cookie cookie1;
-    const std::string valid_name(4096, 'a');
-    const auto valid_result = cookie1.set_name(valid_name);
-    REQUIRE(valid_result == COOKIE::STATUS::OK);
-
-    slim::common::http::Cookie cookie2;
-    const std::string oversized_name(4097, 'a');
-    const auto oversized_result = cookie2.set_name(oversized_name);
-    REQUIRE(oversized_result == COOKIE::STATUS::COOKIE_TOO_LARGE);
-}
-
-TEST_CASE("Cookie set_value: boundary test at 4096", "[cookie][size]") {
-    slim::common::http::Cookie cookie1;
-    const std::string valid_value(4096, 'b');
-    const auto valid_result = cookie1.set_value(valid_value);
-    REQUIRE(valid_result == COOKIE::STATUS::OK);
-
-    slim::common::http::Cookie cookie2;
-    const std::string oversized_value(4097, 'b');
-    const auto oversized_result = cookie2.set_value(oversized_value);
-    REQUIRE(oversized_result == COOKIE::STATUS::COOKIE_TOO_LARGE);
-}
-
-TEST_CASE("Cookie set_name: generated sizes near boundary", "[cookie][size]") {
-    auto size = GENERATE(4090, 4091, 4092, 4093, 4094, 4095, 4096);
-    slim::common::http::Cookie cookie;
-    const std::string name(static_cast<std::size_t>(size), 'n');
-    const auto result = cookie.set_name(name);
-    REQUIRE(result == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("Cookie set_value: generated sizes near boundary", "[cookie][size]") {
-    auto size = GENERATE(4090, 4091, 4092, 4093, 4094, 4095, 4096);
-    slim::common::http::Cookie cookie;
-    const std::string value(static_cast<std::size_t>(size), 'v');
-    const auto result = cookie.set_value(value);
-    REQUIRE(result == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("Cookie set_name: generated sizes over boundary", "[cookie][size]") {
-    auto size = GENERATE(4097, 4098, 4099, 4100, 4101);
-    slim::common::http::Cookie cookie;
-    const std::string name(static_cast<std::size_t>(size), 'n');
-    const auto result = cookie.set_name(name);
-    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
-}
-
-TEST_CASE("Cookie set_value: generated sizes over boundary", "[cookie][size]") {
-    auto size = GENERATE(4097, 4098, 4099, 4100, 4101);
-    slim::common::http::Cookie cookie;
-    const std::string value(static_cast<std::size_t>(size), 'v');
-    const auto result = cookie.set_value(value);
-    REQUIRE(result == COOKIE::STATUS::COOKIE_TOO_LARGE);
 }
 
 TEST_CASE("Cookie Serialize - Basic Name and Value", "[cookie][serialize]") {

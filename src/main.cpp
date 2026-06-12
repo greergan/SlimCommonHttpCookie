@@ -107,11 +107,6 @@ constexpr int month_abbr_to_int(std::string_view s) noexcept {
     }
 }
 
-constexpr bool validate_cookie_size(std::string_view name, std::string_view value) noexcept {
-    // RFC 6265 recommends a limit of 4096 bytes for name + value
-    return (name.size() + value.size()) <= 4096;
-}
-
 constexpr COOKIE::STATUS validate_domain(std::string_view& s) noexcept {
     trim(s);
     if (s.empty()) return COOKIE::STATUS::DOMAIN_EMPTY;
@@ -439,10 +434,7 @@ COOKIE::STATUS slim::common::http::Cookie::set_max_age(std::string_view s) noexc
 
 COOKIE::STATUS slim::common::http::Cookie::set_name(std::string_view s) noexcept {
     auto e = ::validate_name(s);
-    if (e == COOKIE::STATUS::OK) {
-        if (!::validate_cookie_size(s, value)) return COOKIE::STATUS::COOKIE_TOO_LARGE;
-        name = std::string(s);
-    }
+    if (e == COOKIE::STATUS::OK) name = std::string(s);
     return e;
 }
 
@@ -454,10 +446,7 @@ COOKIE::STATUS slim::common::http::Cookie::set_path(std::string_view s) noexcept
 
 COOKIE::STATUS slim::common::http::Cookie::set_value(std::string_view s) noexcept {
     auto e = ::validate_value(s);
-    if (e == COOKIE::STATUS::OK) {
-        if (!::validate_cookie_size(name, s)) return COOKIE::STATUS::COOKIE_TOO_LARGE;
-        value = std::string(s);
-    }
+    if (e == COOKIE::STATUS::OK) value = std::string(s);
     return e;
 }
 
@@ -513,6 +502,8 @@ std::string slim::common::http::Cookie::serialize() const {
         max_age_digits = ::count_digits(*max_age);
         total_size += 10 + max_age_digits;                     // "; Max-Age=" + digits
     }
+
+    if(total_size > 4096) throw(CookieException(COOKIE::STATUS::COOKIE_TOO_LARGE));
 
     std::string result;
     result.reserve(total_size);

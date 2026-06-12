@@ -19,6 +19,7 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 
 | Feature | Description |
 |--------|-------------|
+| Cookie size | Limited to 4096 bytes |
 | Name/Value validation | Strict RFC-style character filtering |
 | Domain validation | Full label + length + syntax checks |
 | Expires parsing | RFC 6265 cookie-date tokenizer stored as RFC 1123 format|
