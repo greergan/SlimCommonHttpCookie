@@ -1,7 +1,7 @@
 # SlimCommonHTTPCookie
 
 A lightweight, RFC6265-oriented HTTP cookie implementation in modern C++.  
-Designed for use in [SlimTS](https://github.com/greergan/SlimTS). Acts as a validating, backing store for SlimTS's Javascript Cookie object.
+Acts as a validating, backing store for [SlimTS's](https://github.com/greergan/SlimTS) Javascript Cookie object.
 
 ## Overview
 
