@@ -20,15 +20,16 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 | Feature | Description |
 |--------|-------------|
 | Cookie size | Limited to 4096 bytes |
+| Cookie uniqueness | RFC 6265 §5.3 — identified by name (case-sensitive), domain, and path |
 | Name/Value validation | Strict RFC-style character filtering |
 | Domain validation | Full label + length + syntax checks |
-| Expires parsing | RFC 6265 cookie-date tokenizer stored as RFC 1123 format|
+| Expires parsing | RFC 6265 cookie-date tokenizer stored as RFC 1123 format |
 | Max-Age support | String + integer parsing with overflow checks |
-| Partitioned | CHIPS validation enforced on outgoing requests |  
+| Partitioned | CHIPS validation enforced on outgoing requests |
 | SameSite handling | strict / lax / none validation |
 | Secure / HttpOnly / Partitioned | Boolean attribute parsing |
 | Serialize | Preallocated, zero-fragment string build |
-| Serialize | Cookie validation with thown exceptions |  
+| Serialize | Cookie validation with thrown exceptions |
 | Error model | Strong enum-based status reporting |
 
 ## Core API
@@ -38,6 +39,25 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 ```cpp
 slim::common::http::Cookie c;
 ```
+
+### Constructors
+
+| Constructor | Description |
+|-------------|-------------|
+| `Cookie()` | Default constructor, produces an empty cookie |
+| `Cookie(std::string_view name, std::string_view value)` | Construct with name and value, validated immediately |
+
+The parameterised constructor validates name and value immediately. Throws `CookieException` on any validation failure.
+
+Copy and move construction and assignment are deleted.
+
+### Operators
+
+| Operator | Description |
+|----------|-------------|
+| `bool operator==(const Cookie&) const noexcept;` | Equality by name (case-sensitive), domain, and path |
+
+Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain, and path. Two cookies sharing the same name are distinct if they differ in domain or path. Cookie names are case-sensitive — `Session` and `session` are different cookies. Value, expiry, and flags are not considered in equality.
 
 ### Setters
 
@@ -62,8 +82,8 @@ slim::common::http::Cookie c;
 
 | Method | Returns |
 |--------|--------|
-| `std::string get_name() const noexcept;` | cookie name |
-| `std::string get_value() const noexcept;` | cookie value |
+| `std::string_view get_name() const noexcept;` | cookie name |
+| `std::string_view get_value() const noexcept;` | cookie value |
 | `std::optional<std::string> get_domain() const noexcept;` | optional domain |
 | `std::optional<std::string> get_path() const noexcept;` | optional path |
 | `std::optional<std::string> get_expires() const noexcept;` | optional expires |
@@ -91,41 +111,76 @@ Checks:
 std::string Cookie::serialize() const;
 ```
 
-Outputs a fully formatted `Set-Cookie` header string.
+Outputs a fully formatted `Set-Cookie` header string.  
+Throws `CookieException` if validation fails or the cookie exceeds 4096 bytes.
 
 ## Example
 
 ```cpp
-    slim::common::http::Cookie c;
+// Constructor with status checking
+slim::common::http::Cookie c("session", "abc123");
 
-    COOKIE::STATUS e = c.set_name("session");
-    if(e != COOKIE::STATUS::OK) return e;
+COOKIE::STATUS e = c.set_path("/");
+if(e != COOKIE::STATUS::OK) return e;
 
-    e = c.set_value("abc123");
-    if(e != COOKIE::STATUS::OK) return e;
-
-    e = c.set_path("/");
-    if(e != COOKIE::STATUS::OK) return e;
-
-    e = c.set_secure(true);
-    if(e != COOKIE::STATUS::OK) return e;
+e = c.set_secure(true);
+if(e != COOKIE::STATUS::OK) return e;
 ```
 
 ```cpp
-    slim::common::http::Cookie c;
-    
-    c.set_name("session");
-    c.set_value("abc123");
+// Default constructor with status checking
+slim::common::http::Cookie c;
+
+COOKIE::STATUS e = c.set_name("session");
+if(e != COOKIE::STATUS::OK) return e;
+
+e = c.set_value("abc123");
+if(e != COOKIE::STATUS::OK) return e;
+
+e = c.set_path("/");
+if(e != COOKIE::STATUS::OK) return e;
+
+e = c.set_secure(true);
+if(e != COOKIE::STATUS::OK) return e;
+```
+
+```cpp
+// Constructor with exception handling
+try {
+    slim::common::http::Cookie c("session", "abc123");
     c.set_path("/");
-    c.set_secure("true");
-    
-    try {
-        auto header = c.serialize();
-    }
-    catch (const slim::common::http::CookieException& e) {
-        std::cerr << "Cookie serialization failed: " << e.what() << '\n';
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Unexpected error: " << e.what() << '\n';
-    }
+    c.set_secure(true);
+
+    auto header = c.serialize();
+    // -> "Set-Cookie: session=abc123; Path=/; Secure\r\n"
+}
+catch (const slim::common::http::CookieException& e) {
+    std::cerr << "Cookie error: " << e.what() << '\n';
+}
+catch (const std::exception& e) {
+    std::cerr << "Unexpected error: " << e.what() << '\n';
+}
+```
+
+```cpp
+// Fully attributed cookie
+try {
+    slim::common::http::Cookie c("__Secure-session", "abc123");
+    c.set_domain("example.com");
+    c.set_path("/");
+    c.set_max_age(3600);
+    c.set_same_site("None");
+    c.set_secure(true);
+    c.set_httponly(true);
+    c.set_partitioned(true);
+
+    auto header = c.serialize();
+    // -> "Set-Cookie: __Secure-session=abc123; Domain=example.com; Path=/; Max-Age=3600; SameSite=None; Secure; HttpOnly; Partitioned\r\n"
+}
+catch (const slim::common::http::CookieException& e) {
+    std::cerr << "Cookie serialization failed: " << e.what() << '\n';
+}
+catch (const std::exception& e) {
+    std::cerr << "Unexpected error: " << e.what() << '\n';
+}
 ```

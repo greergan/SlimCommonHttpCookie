@@ -412,6 +412,20 @@ constexpr COOKIE::STATUS validate_value(std::string_view& s) noexcept {
 
 } // namespace
 
+slim::common::http::Cookie::Cookie(std::string_view n, std::string_view v) {
+    auto e = set_name(n);
+    if (e != COOKIE::STATUS::OK) throw(CookieException(e));
+
+    e = set_value(v);
+    if (e != COOKIE::STATUS::OK) throw(CookieException(e));
+}
+
+bool slim::common::http::Cookie::operator==(const Cookie& other) const noexcept {
+    return name == other.name &&
+           domain == other.domain &&
+           path == other.path;
+}
+
 COOKIE::STATUS slim::common::http::Cookie::set_domain(std::string_view s) noexcept {
     auto e = ::validate_domain(s);
     if(e == COOKIE::STATUS::OK) domain = std::string(s);

@@ -4,6 +4,42 @@
 #include <slim/common/http/cookie.h>
 
 
+// ---------------------------------------------------------------------------
+// Constructor
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Cookie constructor: valid name and value") {
+    slim::common::http::Cookie c("session", "abc123");
+    REQUIRE(c.get_name() == "session");
+    REQUIRE(c.get_value() == "abc123");
+}
+
+TEST_CASE("Cookie constructor: trims whitespace from name and value") {
+    slim::common::http::Cookie c("  session  ", "  abc123  ");
+    REQUIRE(c.get_name() == "session");
+    REQUIRE(c.get_value() == "abc123");
+}
+
+TEST_CASE("Cookie constructor: throws on empty name") {
+    REQUIRE_THROWS_AS(slim::common::http::Cookie("", "abc123"), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie constructor: accepts on empty value") {
+    REQUIRE_NOTHROW(slim::common::http::Cookie("session", ""));
+}
+
+TEST_CASE("Cookie constructor: throws on invalid name character") {
+    REQUIRE_THROWS_AS(slim::common::http::Cookie("bad=name", "abc123"), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie constructor: throws on invalid value character") {
+    REQUIRE_THROWS_AS(slim::common::http::Cookie("session", "bad value"), slim::common::http::CookieException);
+}
+
+TEST_CASE("Cookie constructor: valid cookie serializes correctly") {
+    slim::common::http::Cookie c("session", "abc123");
+    REQUIRE(c.serialize() == "Set-Cookie: session=abc123\r\n");
+}
 
 TEST_CASE("cookie compare ") {
     slim::common::http::Cookie c1, c2, c3;
@@ -67,6 +103,100 @@ TEST_CASE("set_name trims leading and trailing whitespace before storing") {
     COOKIE::STATUS e = c.set_name("  session_id  ");
     REQUIRE(e == COOKIE::STATUS::OK);
     REQUIRE(c.get_name() == "session_id");
+}
+
+// ---------------------------------------------------------------------------
+// operator==
+// ---------------------------------------------------------------------------
+
+TEST_CASE("operator==: identical name, domain, and path are equal") {
+    slim::common::http::Cookie c1("session", "abc123");
+    c1.set_domain("example.com");
+    c1.set_path("/");
+
+    slim::common::http::Cookie c2("session", "abc123");
+    c2.set_domain("example.com");
+    c2.set_path("/");
+
+    REQUIRE(c1 == c2);
+}
+
+TEST_CASE("operator==: same name and domain, different path are not equal") {
+    slim::common::http::Cookie c1("session", "abc123");
+    c1.set_domain("example.com");
+    c1.set_path("/");
+
+    slim::common::http::Cookie c2("session", "abc123");
+    c2.set_domain("example.com");
+    c2.set_path("/api");
+
+    REQUIRE(c1 != c2);
+}
+
+TEST_CASE("operator==: same name and path, different domain are not equal") {
+    slim::common::http::Cookie c1("session", "abc123");
+    c1.set_domain("example.com");
+    c1.set_path("/");
+
+    slim::common::http::Cookie c2("session", "abc123");
+    c2.set_domain("sub.example.com");
+    c2.set_path("/");
+
+    REQUIRE(c1 != c2);
+}
+
+TEST_CASE("operator==: different name, same domain and path are not equal") {
+    slim::common::http::Cookie c1("session", "abc123");
+    c1.set_domain("example.com");
+    c1.set_path("/");
+
+    slim::common::http::Cookie c2("user", "abc123");
+    c2.set_domain("example.com");
+    c2.set_path("/");
+
+    REQUIRE(c1 != c2);
+}
+
+TEST_CASE("operator==: same name, no domain, no path are equal") {
+    slim::common::http::Cookie c1("session", "abc123");
+    slim::common::http::Cookie c2("session", "xyz789");
+    REQUIRE(c1 == c2);
+}
+
+TEST_CASE("operator==: same name, one has domain and one does not are not equal") {
+    slim::common::http::Cookie c1("session", "abc123");
+    c1.set_domain("example.com");
+
+    slim::common::http::Cookie c2("session", "abc123");
+
+    REQUIRE(c1 != c2);
+}
+
+TEST_CASE("operator==: same name, one has path and one does not are not equal") {
+    slim::common::http::Cookie c1("session", "abc123");
+    c1.set_path("/");
+
+    slim::common::http::Cookie c2("session", "abc123");
+
+    REQUIRE(c1 != c2);
+}
+
+TEST_CASE("operator==: different values with same name, domain, and path are equal") {
+    slim::common::http::Cookie c1("session", "abc123");
+    c1.set_domain("example.com");
+    c1.set_path("/");
+
+    slim::common::http::Cookie c2("session", "xyz789");
+    c2.set_domain("example.com");
+    c2.set_path("/");
+
+    REQUIRE(c1 == c2);
+}
+
+TEST_CASE("operator==: name comparison is case-sensitive") {
+    slim::common::http::Cookie c1("Session", "abc123");
+    slim::common::http::Cookie c2("session", "abc123");
+    REQUIRE(c1 != c2);
 }
 
 // ---------------------------------------------------------------------------

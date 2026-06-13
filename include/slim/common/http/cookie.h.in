@@ -102,13 +102,14 @@ class CookieException: public std::logic_error {
 class Cookie {
     public:
         Cookie() = default;
+        Cookie(std::string_view n, std::string_view v);
         Cookie(const Cookie& other) = delete;
         Cookie& operator=(const Cookie& other) = delete;
 
         Cookie(Cookie&& other) = delete;
         Cookie& operator=(Cookie&& other) = delete;
 
-        constexpr bool operator==(const Cookie& other) const noexcept = default;
+        bool operator==(const Cookie& other) const noexcept;
 
         ~Cookie() = default;
 
