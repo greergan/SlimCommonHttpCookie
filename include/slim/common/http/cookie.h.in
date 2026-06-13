@@ -106,8 +106,8 @@ class Cookie {
         Cookie(const Cookie& other) = delete;
         Cookie& operator=(const Cookie& other) = delete;
 
-        Cookie(Cookie&& other) = delete;
-        Cookie& operator=(Cookie&& other) = delete;
+        Cookie(Cookie&& other) noexcept = default;
+        Cookie& operator=(Cookie&& other) noexcept = default;
 
         bool operator==(const Cookie& other) const noexcept;
 
@@ -149,6 +149,8 @@ class Cookie {
 
         COOKIE::STATUS validate() const noexcept;
         std::string serialize() const;
+
+        friend class CookieStore;
 
     private:
         std::string                name;
