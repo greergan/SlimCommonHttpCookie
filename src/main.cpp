@@ -11,6 +11,8 @@
 
 #include <slim/common/http/cookie.h>
 
+namespace slim::common::http {
+
 namespace {
 
 struct AsciiTables {
@@ -420,82 +422,80 @@ slim::common::http::Cookie::Cookie(std::string_view n, std::string_view v) {
     if (e != COOKIE::STATUS::OK) throw(CookieException(e));
 }
 
-bool slim::common::http::Cookie::operator==(const Cookie& other) const noexcept {
-    return name == other.name &&
-           domain == other.domain &&
-           path == other.path;
+bool Cookie::operator==(const Cookie& other) const noexcept {
+    return name == other.name && domain == other.domain && path == other.path;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_domain(std::string_view s) noexcept {
-    auto e = ::validate_domain(s);
+COOKIE::STATUS Cookie::set_domain(std::string_view s) noexcept {
+    auto e = validate_domain(s);
     if(e == COOKIE::STATUS::OK) domain = std::string(s);
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_expires(std::string_view s) noexcept {
-    return ::validate_expires(s, expires);
+COOKIE::STATUS Cookie::set_expires(std::string_view s) noexcept {
+    return validate_expires(s, expires);
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_max_age(std::uint_least64_t v) noexcept {
-    auto e = ::validate_max_age(v);
+COOKIE::STATUS Cookie::set_max_age(std::uint_least64_t v) noexcept {
+    auto e = validate_max_age(v);
     if(e == COOKIE::STATUS::OK) max_age = v;
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_max_age(std::string_view s) noexcept {
-    return ::get_max_age_value(s, max_age);
+COOKIE::STATUS Cookie::set_max_age(std::string_view s) noexcept {
+    return get_max_age_value(s, max_age);
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_name(std::string_view s) noexcept {
-    auto e = ::validate_name(s);
+COOKIE::STATUS Cookie::set_name(std::string_view s) noexcept {
+    auto e = validate_name(s);
     if (e == COOKIE::STATUS::OK) name = std::string(s);
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_path(std::string_view s) noexcept {
-    auto e = ::validate_path(s);
+COOKIE::STATUS Cookie::set_path(std::string_view s) noexcept {
+    auto e = validate_path(s);
     if(e == COOKIE::STATUS::OK) path = std::string(s);
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_value(std::string_view s) noexcept {
-    auto e = ::validate_value(s);
+COOKIE::STATUS Cookie::set_value(std::string_view s) noexcept {
+    auto e = validate_value(s);
     if (e == COOKIE::STATUS::OK) value = std::string(s);
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_same_site(std::string_view s) noexcept {
-    auto e = ::validate_same_site(s);
+COOKIE::STATUS Cookie::set_same_site(std::string_view s) noexcept {
+    auto e = validate_same_site(s);
     if(e == COOKIE::STATUS::OK) same_site = std::string(s);
     return e;
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_httponly(std::string_view s) noexcept {
+COOKIE::STATUS Cookie::set_httponly(std::string_view s) noexcept {
     return get_bool(s, httponly);
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_partitioned(std::string_view s) noexcept {
-    return ::get_bool(s, partitioned);
+COOKIE::STATUS Cookie::set_partitioned(std::string_view s) noexcept {
+    return get_bool(s, partitioned);
 }
 
-COOKIE::STATUS slim::common::http::Cookie::set_secure(std::string_view s) noexcept {
-    return ::get_bool(s, secure);
+COOKIE::STATUS Cookie::set_secure(std::string_view s) noexcept {
+    return get_bool(s, secure);
 }
 
-COOKIE::STATUS slim::common::http::Cookie::validate() const noexcept {
-    auto e = ::validate_secure(same_site, secure);
+COOKIE::STATUS Cookie::validate() const noexcept {
+    auto e = validate_secure(same_site, secure);
     if(e != COOKIE::STATUS::OK) return e;
 
-    e = ::validate_partitioned(partitioned, secure, same_site);
+    e = validate_partitioned(partitioned, secure, same_site);
     if(e != COOKIE::STATUS::OK) return e;
 
-    e = ::validate_prefixes(name, domain, path, secure);
+    e = validate_prefixes(name, domain, path, secure);
     if(e != COOKIE::STATUS::OK) return e;
 
     return COOKIE::STATUS::OK;
 }
 
-std::string slim::common::http::Cookie::serialize() const {
+std::string Cookie::serialize() const {
     auto e = validate();
     if(e != COOKIE::STATUS::OK) throw(CookieException(e));
 
@@ -513,7 +513,7 @@ std::string slim::common::http::Cookie::serialize() const {
 
     std::size_t max_age_digits = 0;
     if (max_age.has_value()) {
-        max_age_digits = ::count_digits(*max_age);
+        max_age_digits = count_digits(*max_age);
         total_size += 10 + max_age_digits;                     // "; Max-Age=" + digits
     }
 
@@ -547,3 +547,5 @@ std::string slim::common::http::Cookie::serialize() const {
     result.append("\r\n");
     return result;
 }
+
+} // namespace slim::common::http
