@@ -11,159 +11,159 @@
 #define SLIMCOMMONHTTPCOOKIE_VERSION  "@SLIMCOMMONHTTPCOOKIE_VERSION@"
 #define SLIMCOMMONHTTPCOOKIE_GIT_HASH "@SLIMCOMMONHTTPCOOKIE_GIT_HASH@"
 
-namespace COOKIE {
-    enum struct STATUS : uint8_t {
-        OK = 0,
-        COOKIE_TOO_LARGE,
-        DOMAIN_BARE_DOT,
-        DOMAIN_EMPTY,
-        DOMAIN_INVALID_CHAR,
-        DOMAIN_LABEL_EMPTY,
-        DOMAIN_LABEL_INVALID_HYPHEN,
-        DOMAIN_LABEL_TOO_LONG,
-        DOMAIN_NUMERIC_TLD,
-        DOMAIN_TOO_LONG,
-        DOMAIN_TRAILING_DOT,
-        EXPIRES_INVALID_FORMAT,
-        INVALID_BOOLEAN,
-        MAX_AGE_EMPTY,
-        MAX_AGE_EXCEEDS_LIMIT,
-        MAX_AGE_INVALID_FORMAT,
-        MAX_AGE_TRAILING_CHARS,
-        NAME_EMPTY,
-        NAME_HOST_PREFIX_HAS_DOMAIN,
-        NAME_HOST_PREFIX_INVALID_PATH,
-        NAME_INVALID_CHAR,
-        NAME_PREFIX_REQUIRES_SECURE,
-        PARTITIONED_REQUIRES_SAME_SITE_NONE,
-        PARTITIONED_REQUIRES_SECURE,
-        PATH_INVALID_CHAR,
-        PATH_MISSING_LEADING_SLASH,
-        SAMESITE_INVALID,
-        SAMESITE_NONE_REQUIRES_SECURE,
-        VALUE_INVALID_CHAR,
-        VALUE_UNMATCHED_QUOTE,
-
-        _COUNT
-    };
-
-    namespace detail {
-        constexpr std::array<std::string_view, static_cast<std::size_t>(STATUS::_COUNT)> status_strings = {
-            "OK",                                                          // OK
-            "Cookie exceeds the maximum allowed size",                     // COOKIE_TOO_LARGE
-            "Domain cannot consist of a bare dot",                         // DOMAIN_BARE_DOT
-            "Domain name cannot be empty",                                 // DOMAIN_EMPTY
-            "Domain contains an invalid character",                        // DOMAIN_INVALID_CHAR
-            "Domain label cannot be empty",                                // DOMAIN_LABEL_EMPTY
-            "Domain label has a hyphen in an invalid position",            // DOMAIN_LABEL_INVALID_HYPHEN
-            "Domain label exceeds the maximum allowed length",             // DOMAIN_LABEL_TOO_LONG
-            "Top-level domain (TLD) must not be numeric",                  // DOMAIN_NUMERIC_TLD
-            "Domain name exceeds the maximum allowed length",              // DOMAIN_TOO_LONG
-            "Domain name must not end with a trailing dot",                // DOMAIN_TRAILING_DOT
-            "Expires attribute has an invalid date format",                // EXPIRES_INVALID_FORMAT
-            "Expected a valid boolean value",                              // INVALID_BOOLEAN
-            "Max-Age attribute cannot be empty",                           // MAX_AGE_EMPTY
-            "Max-Age value exceeds the maximum allowed limit",             // MAX_AGE_EXCEEDS_LIMIT
-            "Max-Age attribute has an invalid format",                     // MAX_AGE_INVALID_FORMAT
-            "Max-Age value has unexpected trailing characters",            // MAX_AGE_TRAILING_CHARS
-            "Cookie name cannot be empty",                                 // NAME_EMPTY
-            "The __Host- prefix cannot be combined with a Domain attribute", // NAME_HOST_PREFIX_HAS_DOMAIN
-            "The __Host- prefix requires the Path attribute to be '/'",    // NAME_HOST_PREFIX_INVALID_PATH
-            "Cookie name contains an invalid character",                   // NAME_INVALID_CHAR
-            "Cookie name prefix requires the Secure attribute",            // NAME_PREFIX_REQUIRES_SECURE
-            "Partitioned cookies require SameSite=None",                   // PARTITIONED_REQUIRES_SAME_SITE_NONE
-            "Partitioned cookies require the Secure attribute",            // PARTITIONED_REQUIRES_SECURE
-            "Path contains an invalid character",                          // PATH_INVALID_CHAR
-            "Path must begin with a forward slash ('/')",                  // PATH_MISSING_LEADING_SLASH
-            "SameSite attribute has an invalid value",                     // SAMESITE_INVALID
-            "SameSite=None requires the Secure attribute",                 // SAMESITE_NONE_REQUIRES_SECURE
-            "Cookie value contains an invalid character",                  // VALUE_INVALID_CHAR
-            "Cookie value has an unmatched quotation mark",                // VALUE_UNMATCHED_QUOTE
-        };
-    }
-
-    [[nodiscard]] constexpr std::string_view status_string(STATUS status) noexcept {
-        const auto index = static_cast<std::size_t>(status);
-        if (index < detail::status_strings.size()) return detail::status_strings[index];
-        return "UNKNOWN";
-    }
-
-} // namespace COOKIE
-
 namespace slim::common::http {
 
-class CookieException: public std::logic_error {
-    public:
-        explicit CookieException(COOKIE::STATUS e): std::logic_error("Invalid Cookie: " + std::string{COOKIE::status_string(e)}) {}
-        explicit CookieException(std::string msg): std::logic_error(msg) {}
-        virtual ~CookieException() throw () {}
+enum class CookieStatus : uint8_t {
+    Ok = 0,
+    CookieTooLarge,
+    DomainBareDot,
+    DomainEmpty,
+    DomainInvalidChar,
+    DomainLabelEmpty,
+    DomainLabelInvalidHyphen,
+    DomainLabelTooLong,
+    DomainNumericTld,
+    DomainTooLong,
+    DomainTrailingDot,
+    ExpiresInvalidFormat,
+    InvalidBoolean,
+    MaxAgeEmpty,
+    MaxAgeExceedsLimit,
+    MaxAgeInvalidFormat,
+    MaxAgeTrailingChars,
+    NameEmpty,
+    NameHostPrefixHasDomain,
+    NameHostPrefixInvalidPath,
+    NameInvalidChar,
+    NamePrefixRequiresSecure,
+    PartitionedRequiresSameSiteNone,
+    PartitionedRequiresSecure,
+    PathInvalidChar,
+    PathMissingLeadingSlash,
+    SameSiteInvalid,
+    SameSiteNoneRequiresSecure,
+    ValueInvalidChar,
+    ValueUnmatchedQuote,
+    Count
+};
+
+namespace detail {
+    constexpr std::array<std::string_view, static_cast<std::size_t>(CookieStatus::Count)> status_strings = {
+        "OK",
+        "Cookie exceeds the maximum allowed size",
+        "Domain cannot consist of a bare dot",
+        "Domain name cannot be empty",
+        "Domain contains an invalid character",
+        "Domain label cannot be empty",
+        "Domain label has a hyphen in an invalid position",
+        "Domain label exceeds the maximum allowed length",
+        "Top-level domain (TLD) must not be numeric",
+        "Domain name exceeds the maximum allowed length",
+        "Domain name must not end with a trailing dot",
+        "Expires attribute has an invalid date format",
+        "Expected a valid boolean value",
+        "Max-Age attribute cannot be empty",
+        "Max-Age value exceeds the maximum allowed limit",
+        "Max-Age attribute has an invalid format",
+        "Max-Age value has unexpected trailing characters",
+        "Cookie name cannot be empty",
+        "The __Host- prefix cannot be combined with a Domain attribute",
+        "The __Host- prefix requires the Path attribute to be '/'",
+        "Cookie name contains an invalid character",
+        "Cookie name prefix requires the Secure attribute",
+        "Partitioned cookies require SameSite=None",
+        "Partitioned cookies require the Secure attribute",
+        "Path contains an invalid character",
+        "Path must begin with a forward slash ('/')",
+        "SameSite attribute has an invalid value",
+        "SameSite=None requires the Secure attribute",
+        "Cookie value contains an invalid character",
+        "Cookie value has an unmatched quotation mark"
+    };
+}
+
+[[nodiscard]] constexpr std::string_view to_string(CookieStatus status) noexcept {
+    const auto index = static_cast<std::size_t>(status);
+    if (index < detail::status_strings.size()) return detail::status_strings[index];
+    return "Unknown";
+}
+
+class CookieException : public std::logic_error {
+public:
+    explicit CookieException(CookieStatus e) : std::logic_error("Invalid Cookie: " + std::string{to_string(e)}) {}
+    explicit CookieException(std::string msg) : std::logic_error(msg) {}
 };
 
 class Cookie {
-    public:
-        Cookie() = default;
-        Cookie(std::string_view n, std::string_view v);
-        Cookie(const Cookie& other) = delete;
-        Cookie& operator=(const Cookie& other) = delete;
+public:
+    Cookie() = default;
+    Cookie(std::string_view n, std::string_view v);
 
-        Cookie(Cookie&& other) noexcept = default;
-        Cookie& operator=(Cookie&& other) noexcept = default;
+    // Disable copies to enforce Move-Only semantics
+    Cookie(const Cookie& other) = delete;
+    Cookie& operator=(const Cookie& other) = delete;
 
-        bool operator==(const Cookie& other) const noexcept;
+    // Enable Move semantics
+    Cookie(Cookie&& other) noexcept = default;
+    Cookie& operator=(Cookie&& other) noexcept = default;
 
-        ~Cookie() = default;
+    bool operator==(const Cookie& other) const noexcept;
+    bool operator!=(const Cookie& other) const noexcept { return !(*this == other); }
 
-        COOKIE::STATUS set_max_age(std::string_view s) noexcept;
-        COOKIE::STATUS set_max_age(std::uint_least64_t v) noexcept;
-        std::optional<std::uint_least64_t> get_max_age() const noexcept { return max_age; };
+    ~Cookie() = default;
 
-        COOKIE::STATUS set_name(std::string_view s) noexcept;
-        std::string_view get_name() const noexcept { return name; };
+    CookieStatus set_max_age(std::string_view s) noexcept;
+    CookieStatus set_max_age(std::uint_least64_t v) noexcept;
+    std::optional<std::uint_least64_t> get_max_age() const noexcept { return max_age; }
 
-        COOKIE::STATUS set_value(std::string_view s) noexcept;
-        std::string_view get_value() const noexcept { return value; };
+    CookieStatus set_name(std::string_view s) noexcept;
+    std::string_view get_name() const noexcept { return name; }
 
-        COOKIE::STATUS set_path(std::string_view s) noexcept;
-        std::optional<std::string> get_path() const noexcept { return path; };
+    CookieStatus set_value(std::string_view s) noexcept;
+    std::string_view get_value() const noexcept { return value; }
 
-        COOKIE::STATUS set_domain(std::string_view s) noexcept;
-        std::optional<std::string> get_domain() const noexcept { return domain; };
+    CookieStatus set_path(std::string_view s) noexcept;
+    std::optional<std::string> get_path() const noexcept { return path; }
 
-        COOKIE::STATUS set_expires(std::string_view s) noexcept;
-        std::optional<std::string> get_expires() const noexcept { return expires; };
+    CookieStatus set_domain(std::string_view s) noexcept;
+    std::optional<std::string> get_domain() const noexcept { return domain; }
 
-        COOKIE::STATUS set_same_site(std::string_view s) noexcept;
-        std::optional<std::string> get_same_site() const noexcept { return same_site; };
+    CookieStatus set_expires(std::string_view s) noexcept;
+    std::optional<std::string> get_expires() const noexcept { return expires; }
 
-        void set_httponly(bool b) noexcept { httponly = b; };
-        COOKIE::STATUS set_httponly(std::string_view s) noexcept;
-        bool get_httponly() const noexcept { return httponly; };
+    CookieStatus set_same_site(std::string_view s) noexcept;
+    std::optional<std::string> get_same_site() const noexcept { return same_site; }
 
-        void set_partitioned(bool b) noexcept { partitioned = b; };
-        COOKIE::STATUS set_partitioned(std::string_view s) noexcept;
-        bool get_partitioned() const noexcept { return partitioned; };
+    void set_httponly(bool b) noexcept { httponly = b; }
+    CookieStatus set_httponly(std::string_view s) noexcept;
+    bool get_httponly() const noexcept { return httponly; }
 
-        void set_secure(bool b) noexcept { secure = b; };
-        COOKIE::STATUS set_secure(std::string_view s) noexcept;
-        bool get_secure() const noexcept { return secure; };
+    void set_partitioned(bool b) noexcept { partitioned = b; }
+    CookieStatus set_partitioned(std::string_view s) noexcept;
+    bool get_partitioned() const noexcept { return partitioned; }
 
-        COOKIE::STATUS validate() const noexcept;
-        std::string serialize() const;
+    void set_secure(bool b) noexcept { secure = b; }
+    CookieStatus set_secure(std::string_view s) noexcept;
+    bool get_secure() const noexcept { return secure; }
 
-        friend class CookieStore;
+    CookieStatus validate() const noexcept;
+    std::string serialize() const;
 
-    private:
-        std::string                name;
-        std::string                value;
-        std::optional<std::string> path;
-        std::optional<std::string> domain;
-        std::optional<std::string> expires;
-        std::optional<std::string> same_site;
-        std::optional<std::uint_least64_t> max_age;
-        bool                       httponly{false};
-        bool                       partitioned{false};
-        bool                       secure{false};
+    friend class CookieStore;
+
+private:
+    std::string                name;
+    std::string                value;
+    std::optional<std::string> path;
+    std::optional<std::string> domain;
+    std::optional<std::string> expires;
+    std::optional<std::string> same_site;
+    std::optional<std::uint_least64_t> max_age;
+    bool                       httponly{false};
+    bool                       partitioned{false};
+    bool                       secure{false};
 };
 
-} // slim::common::http
+} // namespace slim::common::http
+
 #endif // SLIM_COMMON_HTTP_COOKIE_H

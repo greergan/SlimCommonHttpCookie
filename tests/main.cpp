@@ -3,57 +3,55 @@
 #include <string>
 #include <slim/common/http/cookie.h>
 
+using slim::common::http::Cookie;
+using slim::common::http::CookieException;
+using slim::common::http::CookieStatus;
 
 // ---------------------------------------------------------------------------
 // Constructor
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Cookie constructor: valid name and value") {
-    slim::common::http::Cookie c("session", "abc123");
+    Cookie c("session", "abc123");
     REQUIRE(c.get_name() == "session");
     REQUIRE(c.get_value() == "abc123");
 }
 
 TEST_CASE("Cookie constructor: trims whitespace from name and value") {
-    slim::common::http::Cookie c("  session  ", "  abc123  ");
+    Cookie c("  session  ", "  abc123  ");
     REQUIRE(c.get_name() == "session");
     REQUIRE(c.get_value() == "abc123");
 }
 
 TEST_CASE("Cookie constructor: throws on empty name") {
-    REQUIRE_THROWS_AS(slim::common::http::Cookie("", "abc123"), slim::common::http::CookieException);
+    REQUIRE_THROWS_AS(Cookie("", "abc123"), CookieException);
 }
 
 TEST_CASE("Cookie constructor: accepts on empty value") {
-    REQUIRE_NOTHROW(slim::common::http::Cookie("session", ""));
+    REQUIRE_NOTHROW(Cookie("session", ""));
 }
 
 TEST_CASE("Cookie constructor: throws on invalid name character") {
-    REQUIRE_THROWS_AS(slim::common::http::Cookie("bad=name", "abc123"), slim::common::http::CookieException);
+    REQUIRE_THROWS_AS(Cookie("bad=name", "abc123"), CookieException);
 }
 
 TEST_CASE("Cookie constructor: throws on invalid value character") {
-    REQUIRE_THROWS_AS(slim::common::http::Cookie("session", "bad value"), slim::common::http::CookieException);
+    REQUIRE_THROWS_AS(Cookie("session", "bad value"), CookieException);
 }
 
 TEST_CASE("Cookie constructor: valid cookie serializes correctly") {
-    slim::common::http::Cookie c("session", "abc123");
+    Cookie c("session", "abc123");
     REQUIRE(c.serialize() == "Set-Cookie: session=abc123\r\n");
 }
 
 TEST_CASE("cookie compare ") {
-    slim::common::http::Cookie c1, c2, c3;
+    Cookie c1, c2, c3;
 
-    COOKIE::STATUS e1 = c1.set_name("cookie_name");
-    REQUIRE(e1 == COOKIE::STATUS::OK);
-
-    COOKIE::STATUS e2 = c2.set_name("cookie_name");
-    REQUIRE(e2 == COOKIE::STATUS::OK);
-
+    REQUIRE(c1.set_name("cookie_name") == CookieStatus::Ok);
+    REQUIRE(c2.set_name("cookie_name") == CookieStatus::Ok);
     REQUIRE(c1 == c2);
 
-    COOKIE::STATUS e3 = c3.set_name("cookie_three");
-    REQUIRE(e3 == COOKIE::STATUS::OK);
+    REQUIRE(c3.set_name("cookie_three") == CookieStatus::Ok);
     REQUIRE(c1 != c3);
 }
 
@@ -62,46 +60,39 @@ TEST_CASE("cookie compare ") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_name accepts a valid token") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_name("   session_id   ");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_name("   session_id   ") == CookieStatus::Ok);
     REQUIRE(c.get_name() == "session_id");
 }
 
 TEST_CASE("set_name rejects an empty string") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_name("");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_name("") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_name rejects a name containing a separator character") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_name("bad=name");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_name("bad=name") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_name rejects a name with a space") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_name("bad name");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_name("bad name") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_name rejects a name with a control character") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_name("bad\x01name");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_name("bad\x01name") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_name rejects a name containing a colon") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_name("bad:name");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_name("bad:name") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_name trims leading and trailing whitespace before storing") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_name("  session_id  ");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_name("  session_id  ") == CookieStatus::Ok);
     REQUIRE(c.get_name() == "session_id");
 }
 
@@ -110,11 +101,11 @@ TEST_CASE("set_name trims leading and trailing whitespace before storing") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("operator==: identical name, domain, and path are equal") {
-    slim::common::http::Cookie c1("session", "abc123");
+    Cookie c1("session", "abc123");
     c1.set_domain("example.com");
     c1.set_path("/");
 
-    slim::common::http::Cookie c2("session", "abc123");
+    Cookie c2("session", "abc123");
     c2.set_domain("example.com");
     c2.set_path("/");
 
@@ -122,11 +113,11 @@ TEST_CASE("operator==: identical name, domain, and path are equal") {
 }
 
 TEST_CASE("operator==: same name and domain, different path are not equal") {
-    slim::common::http::Cookie c1("session", "abc123");
+    Cookie c1("session", "abc123");
     c1.set_domain("example.com");
     c1.set_path("/");
 
-    slim::common::http::Cookie c2("session", "abc123");
+    Cookie c2("session", "abc123");
     c2.set_domain("example.com");
     c2.set_path("/api");
 
@@ -134,11 +125,11 @@ TEST_CASE("operator==: same name and domain, different path are not equal") {
 }
 
 TEST_CASE("operator==: same name and path, different domain are not equal") {
-    slim::common::http::Cookie c1("session", "abc123");
+    Cookie c1("session", "abc123");
     c1.set_domain("example.com");
     c1.set_path("/");
 
-    slim::common::http::Cookie c2("session", "abc123");
+    Cookie c2("session", "abc123");
     c2.set_domain("sub.example.com");
     c2.set_path("/");
 
@@ -146,11 +137,11 @@ TEST_CASE("operator==: same name and path, different domain are not equal") {
 }
 
 TEST_CASE("operator==: different name, same domain and path are not equal") {
-    slim::common::http::Cookie c1("session", "abc123");
+    Cookie c1("session", "abc123");
     c1.set_domain("example.com");
     c1.set_path("/");
 
-    slim::common::http::Cookie c2("user", "abc123");
+    Cookie c2("user", "abc123");
     c2.set_domain("example.com");
     c2.set_path("/");
 
@@ -158,35 +149,35 @@ TEST_CASE("operator==: different name, same domain and path are not equal") {
 }
 
 TEST_CASE("operator==: same name, no domain, no path are equal") {
-    slim::common::http::Cookie c1("session", "abc123");
-    slim::common::http::Cookie c2("session", "xyz789");
+    Cookie c1("session", "abc123");
+    Cookie c2("session", "xyz789");
     REQUIRE(c1 == c2);
 }
 
 TEST_CASE("operator==: same name, one has domain and one does not are not equal") {
-    slim::common::http::Cookie c1("session", "abc123");
+    Cookie c1("session", "abc123");
     c1.set_domain("example.com");
 
-    slim::common::http::Cookie c2("session", "abc123");
+    Cookie c2("session", "abc123");
 
     REQUIRE(c1 != c2);
 }
 
 TEST_CASE("operator==: same name, one has path and one does not are not equal") {
-    slim::common::http::Cookie c1("session", "abc123");
+    Cookie c1("session", "abc123");
     c1.set_path("/");
 
-    slim::common::http::Cookie c2("session", "abc123");
+    Cookie c2("session", "abc123");
 
     REQUIRE(c1 != c2);
 }
 
 TEST_CASE("operator==: different values with same name, domain, and path are equal") {
-    slim::common::http::Cookie c1("session", "abc123");
+    Cookie c1("session", "abc123");
     c1.set_domain("example.com");
     c1.set_path("/");
 
-    slim::common::http::Cookie c2("session", "xyz789");
+    Cookie c2("session", "xyz789");
     c2.set_domain("example.com");
     c2.set_path("/");
 
@@ -194,8 +185,8 @@ TEST_CASE("operator==: different values with same name, domain, and path are equ
 }
 
 TEST_CASE("operator==: name comparison is case-sensitive") {
-    slim::common::http::Cookie c1("Session", "abc123");
-    slim::common::http::Cookie c2("session", "abc123");
+    Cookie c1("Session", "abc123");
+    Cookie c2("session", "abc123");
     REQUIRE(c1 != c2);
 }
 
@@ -204,46 +195,39 @@ TEST_CASE("operator==: name comparison is case-sensitive") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_value accepts a plain ASCII value") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_value("\t abc123\t");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_value("\t abc123\t") == CookieStatus::Ok);
     REQUIRE(c.get_value() == "abc123");
 }
 
 TEST_CASE("set_value accepts a properly double-quoted value") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_value("\"abc123\"");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_value("\"abc123\"") == CookieStatus::Ok);
 }
 
 TEST_CASE("set_value rejects an unmatched leading double quote") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_value("\"abc");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_value("\"abc") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_value rejects a value with a space character") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_value("bad value");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_value("bad value") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_value rejects a value with a semicolon") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_value("bad;value");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_value("bad;value") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_value rejects a value with a DEL character") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_value("bad\x7Fvalue");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_value("bad\x7Fvalue") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_value trims leading and trailing whitespace before storing") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_value("  abc123  ");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_value("  abc123  ") == CookieStatus::Ok);
     REQUIRE(c.get_value() == "abc123");
 }
 
@@ -252,47 +236,40 @@ TEST_CASE("set_value trims leading and trailing whitespace before storing") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_path accepts the root path") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_path("/");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_path("/") == CookieStatus::Ok);
     REQUIRE(c.get_path() == "/");
 }
 
 TEST_CASE("set_path accepts a multi-segment path") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_path("/api/v1/resource");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_path("/api/v1/resource") == CookieStatus::Ok);
     REQUIRE(c.get_path() == "/api/v1/resource");
 }
 
 TEST_CASE("set_path rejects a path that does not start with slash") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_path("api/v1");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_path("api/v1") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_path accepts an empty path") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_path("");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_path("") == CookieStatus::Ok);
 }
 
 TEST_CASE("set_path rejects a path containing a semicolon") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_path("/bad;path");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_path("/bad;path") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_path rejects a path with a control character") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_path("/bad\x1Fpath");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_path("/bad\x1Fpath") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_path trims leading and trailing whitespace before storing") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_path("  /api/v1  ");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_path("  /api/v1  ") == CookieStatus::Ok);
     REQUIRE(c.get_path() == "/api/v1");
 }
 
@@ -301,78 +278,66 @@ TEST_CASE("set_path trims leading and trailing whitespace before storing") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_domain accepts a simple hostname") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain("example.com");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain("example.com") == CookieStatus::Ok);
     REQUIRE(c.get_domain() == "example.com");
 }
 
 TEST_CASE("set_domain accepts a domain with a leading dot") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain(".example.com");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain(".example.com") == CookieStatus::Ok);
 }
 
 TEST_CASE("set_domain accepts a subdomain") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain("sub.example.com");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain("sub.example.com") == CookieStatus::Ok);
 }
 
 TEST_CASE("set_domain rejects an empty string") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain("");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain("") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_domain rejects a bare dot") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain(".");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain(".") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_domain rejects a domain with a trailing dot") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain("example.com.");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain("example.com.") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_domain rejects a label starting with a hyphen") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain("-bad.example.com");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain("-bad.example.com") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_domain rejects a label ending with a hyphen") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain("bad-.example.com");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain("bad-.example.com") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_domain rejects a domain exceeding 253 characters") {
-    slim::common::http::Cookie c;
-    // 63-char label repeated four times with dots = 255 chars
+    Cookie c;
     std::string long_domain(63, 'a');
     long_domain += ".";
     long_domain += std::string(63, 'b');
     long_domain += ".";
     long_domain += std::string(63, 'c');
     long_domain += ".";
-    long_domain += std::string(63, 'd');  // total = 4*63 + 3 dots = 255
-    COOKIE::STATUS e = c.set_domain(long_domain);
-    REQUIRE(e != COOKIE::STATUS::OK);
+    long_domain += std::string(63, 'd');
+    REQUIRE(c.set_domain(long_domain) != CookieStatus::Ok);
 }
 
 TEST_CASE("set_domain rejects a label with an invalid character") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain("bad_label.example.com");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain("bad_label.example.com") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_domain trims leading and trailing whitespace before storing") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_domain("  example.com  ");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_domain("  example.com  ") == CookieStatus::Ok);
     REQUIRE(c.get_domain() == "example.com");
 }
 
@@ -381,47 +346,40 @@ TEST_CASE("set_domain trims leading and trailing whitespace before storing") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_expires accepts an RFC 1123 date") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_expires("  Thu, 01 Jan 2099 00:00:00 GMT  ");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_expires("  Thu, 01 Jan 2099 00:00:00 GMT  ") == CookieStatus::Ok);
     REQUIRE(c.get_expires() == "Thu, 01 Jan 2099 00:00:00 GMT");
 }
 
 TEST_CASE("set_expires accepts an RFC 850 date") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_expires("Thursday, 01-Jan-99 00:00:00 GMT");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_expires("Thursday, 01-Jan-99 00:00:00 GMT") == CookieStatus::Ok);
 }
 
 TEST_CASE("set_expires accepts an ANSI C asctime date") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_expires("Thu Jan  1 00:00:00 2099");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_expires("Thu Jan  1 00:00:00 2099") == CookieStatus::Ok);
 }
 
 TEST_CASE("set_expires rejects a malformed date string") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_expires("not-a-date");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_expires("not-a-date") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_expires rejects an ISO 8601 date") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_expires("2099-01-01T00:00:00Z");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_expires("2099-01-01T00:00:00Z") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_expires trims leading and trailing whitespace before storing") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_expires("  Thu, 01 Jan 2099 00:00:00 GMT  ");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_expires("  Thu, 01 Jan 2099 00:00:00 GMT  ") == CookieStatus::Ok);
     REQUIRE(c.get_expires() == "Thu, 01 Jan 2099 00:00:00 GMT");
 }
 
 TEST_CASE("set_expires translates a valid asctime date with a single-digit day") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_expires("Thu Jan  1 12:30:00 2099");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_expires("Thu Jan  1 12:30:00 2099") == CookieStatus::Ok);
     REQUIRE(c.get_expires() == "Thu, 01 Jan 2099 12:30:00 GMT");
 }
 
@@ -430,71 +388,61 @@ TEST_CASE("set_expires translates a valid asctime date with a single-digit day")
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_max_age accepts zero using numeric") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_max_age(0);
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_max_age(0) == CookieStatus::Ok);
     REQUIRE(c.get_max_age() == 0u);
 }
 
 TEST_CASE("set_max_age accepts zero using string") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_max_age("0");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_max_age("0") == CookieStatus::Ok);
     REQUIRE(c.get_max_age() == 0u);
 }
 
 TEST_CASE("set_max_age accepts a positive integer") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_max_age(3600);
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_max_age(3600) == CookieStatus::Ok);
     REQUIRE(c.get_max_age() == 3600u);
 }
 
 TEST_CASE("set_max_age accepts a positive integer string") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_max_age("3600");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_max_age("3600") == CookieStatus::Ok);
     REQUIRE(c.get_max_age() == 3600u);
 }
 
 TEST_CASE("set_max_age accepts the maximum time_t value") {
-    slim::common::http::Cookie c;
+    Cookie c;
     constexpr std::uint_least64_t max_val = static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max());
-    COOKIE::STATUS e = c.set_max_age(std::to_string(max_val));
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(c.set_max_age(std::to_string(max_val)) == CookieStatus::Ok);
     REQUIRE(c.get_max_age() == max_val);
 }
 
 TEST_CASE("set_max_age rejects a value exceeding the maximum time_t value") {
-    slim::common::http::Cookie c;
+    Cookie c;
     constexpr std::uint_least64_t over_max = static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max()) + 1;
-    COOKIE::STATUS e = c.set_max_age(std::to_string(over_max));
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(c.set_max_age(std::to_string(over_max)) != CookieStatus::Ok);
 }
 
 TEST_CASE("set_max_age translates a negative integer to 0") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_max_age("-1");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_max_age("-1") == CookieStatus::Ok);
     REQUIRE(c.get_max_age() == 0);
 }
 
 TEST_CASE("set_max_age rejects a non-numeric string") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_max_age("abc");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_max_age("abc") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_max_age rejects a value with trailing characters") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_max_age("3600x");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_max_age("3600x") != CookieStatus::Ok);
 }
 
 TEST_CASE("set_max_age rejects an empty string") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_max_age("");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_max_age("") != CookieStatus::Ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -502,58 +450,50 @@ TEST_CASE("set_max_age rejects an empty string") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_same_site accepts Strict") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site(" Strict\t");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_same_site(" Strict\t") == CookieStatus::Ok);
     REQUIRE(c.get_same_site() == "Strict");
 }
 
 TEST_CASE("set_same_site accepts Lax") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("Lax    ");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_same_site("Lax   ") == CookieStatus::Ok);
     REQUIRE(c.get_same_site() == "Lax");
 }
 
 TEST_CASE("set_same_site accepts None") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("     None");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_same_site("     None") == CookieStatus::Ok);
     REQUIRE(c.get_same_site() == "None");
 }
 
 TEST_CASE("set_same_site is case-insensitive strict") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("strict");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_same_site("strict") == CookieStatus::Ok);
     REQUIRE(c.get_same_site() == "strict");
 }
 
 TEST_CASE("set_same_site is case-insensitive lax") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("lax");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_same_site("lax") == CookieStatus::Ok);
     REQUIRE(c.get_same_site() == "lax");
 }
 
 TEST_CASE("set_same_site is case-insensitive none") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("  none");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_same_site("  none") == CookieStatus::Ok);
     REQUIRE(c.get_same_site() == "none");
 }
 
 TEST_CASE("set_same_site trims leading and trailing whitespace before storing") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("  Strict  ");
-    REQUIRE(e == COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_same_site("  Strict  ") == CookieStatus::Ok);
     REQUIRE(c.get_same_site() == "Strict");
 }
 
 TEST_CASE("set_same_site rejects an unrecognised value") {
-    slim::common::http::Cookie c;
-    COOKIE::STATUS e = c.set_same_site("always");
-    REQUIRE(e != COOKIE::STATUS::OK);
+    Cookie c;
+    REQUIRE(c.set_same_site("always") != CookieStatus::Ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -561,37 +501,37 @@ TEST_CASE("set_same_site rejects an unrecognised value") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_httponly accepts true") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_httponly(std::string_view{"true"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_httponly() == true);
 }
 
 TEST_CASE("set_httponly accepts TRUE") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_httponly(std::string_view{"TRUE"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_httponly() == true);
 }
 
 TEST_CASE("set_httponly accepts false") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_httponly(std::string_view{"false"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_httponly() == false);
 }
 
 TEST_CASE("set_httponly accepts FALSE") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_httponly(std::string_view{"FALSE"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_httponly() == false);
 }
 
 TEST_CASE("set_httponly rejects an invalid boolean string") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_httponly(std::string_view{"yes"});
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(e != CookieStatus::Ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -599,37 +539,37 @@ TEST_CASE("set_httponly rejects an invalid boolean string") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_secure accepts true") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_secure(std::string_view{"true"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_secure() == true);
 }
 
 TEST_CASE("set_secure accepts TRUE") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_secure(std::string_view{"TRUE"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_secure() == true);
 }
 
 TEST_CASE("set_secure accepts false") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_secure(std::string_view{"false"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_secure() == false);
 }
 
 TEST_CASE("set_secure accepts FALSE") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_secure(std::string_view{"FALSE"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_secure() == false);
 }
 
 TEST_CASE("set_secure rejects an invalid boolean string") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_secure(std::string_view{"1"});
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(e != CookieStatus::Ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -637,37 +577,37 @@ TEST_CASE("set_secure rejects an invalid boolean string") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("set_partitioned accepts true") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_partitioned(std::string_view{"true"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_partitioned() == true);
 }
 
 TEST_CASE("set_partitioned accepts TRUE") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_partitioned(std::string_view{"TRUE"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_partitioned() == true);
 }
 
 TEST_CASE("set_partitioned accepts false") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_partitioned(std::string_view{"false"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_partitioned() == false);
 }
 
 TEST_CASE("set_partitioned accepts FALSE") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_partitioned(std::string_view{"FALSE"});
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
     REQUIRE(c.get_partitioned() == false);
 }
 
 TEST_CASE("set_partitioned rejects an invalid boolean string") {
-    slim::common::http::Cookie c;
+    Cookie c;
     auto e = c.set_partitioned(std::string_view{"no"});
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(e != CookieStatus::Ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -675,47 +615,47 @@ TEST_CASE("set_partitioned rejects an invalid boolean string") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("validate_secure returns no error when SameSite is Strict and Secure is false") {
-    slim::common::http::Cookie c;
+    Cookie c;
     c.set_name("cookie_name");
     c.set_same_site("Strict");
     auto e = c.validate();
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
 }
 
 TEST_CASE("validate_secure returns error when SameSite is None and Secure is false") {
-    slim::common::http::Cookie c;
+    Cookie c;
     c.set_secure("true");
     c.set_same_site("None");
-    c.set_secure("false");  // force via internal state; validate_secure re-checks consistency
+    c.set_secure("false");
     auto e = c.validate();
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(e != CookieStatus::Ok);
 }
 
 TEST_CASE("validate_partitioned returns no error when SameSite==None and Secure is true and Partitioned is true") {
-    slim::common::http::Cookie c;
+    Cookie c;
     c.set_name("cookie_name");
     c.set_secure("true");
     c.set_partitioned("true");
     c.set_same_site("NONE");
     auto e = c.validate();
-    REQUIRE(e == COOKIE::STATUS::OK);
+    REQUIRE(e == CookieStatus::Ok);
 }
 
 TEST_CASE("validate_partitioned returns error when SameSite!=None and Secure is true and Partitioned is true") {
-    slim::common::http::Cookie c;
+    Cookie c;
     c.set_name("cookie_name");
     c.set_secure("true");
     c.set_partitioned("true");
     c.set_same_site("lax");
     auto e = c.validate();
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(e != CookieStatus::Ok);
 }
 
 TEST_CASE("validate_partitioned returns error when Partitioned is true but Secure is false") {
-    slim::common::http::Cookie c;
+    Cookie c;
     c.set_partitioned("true");
     auto e = c.validate();
-    REQUIRE(e != COOKIE::STATUS::OK);
+    REQUIRE(e != CookieStatus::Ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -723,159 +663,149 @@ TEST_CASE("validate_partitioned returns error when Partitioned is true but Secur
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Cookie set_name and set_value: minimal valid cookie", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const auto name_result = cookie.set_name("a");
-    const auto value_result = cookie.set_value("b");
-    REQUIRE(name_result == COOKIE::STATUS::OK);
-    REQUIRE(value_result == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("a") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("b") == CookieStatus::Ok);
 }
 
 TEST_CASE("Cookie set_name: single character name", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const auto result = cookie.set_name("x");
-    REQUIRE(result == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("x") == CookieStatus::Ok);
 }
 
 TEST_CASE("Cookie set_value: single character value", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const auto result = cookie.set_value("y");
-    REQUIRE(result == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_value("y") == CookieStatus::Ok);
 }
 
 TEST_CASE("Cookie set_name and set_value: at maximum allowed size", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
+    Cookie cookie;
     const std::string name(2048, 'n');
     const std::string value(2048, 'v');
-    const auto name_result = cookie.set_name(name);
-    const auto value_result = cookie.set_value(value);
-    REQUIRE(name_result == COOKIE::STATUS::OK);
-    REQUIRE(value_result == COOKIE::STATUS::OK);
+    REQUIRE(cookie.set_name(name) == CookieStatus::Ok);
+    REQUIRE(cookie.set_value(value) == CookieStatus::Ok);
 }
 
 TEST_CASE("Cookie set_name and set_value: realistic cookie", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const auto name_result = cookie.set_name("session_id");
-    const auto value_result = cookie.set_value("abc123def456ghi789jkl012mno345pqr678stu901vwx234yz");
-    REQUIRE(name_result == COOKIE::STATUS::OK);
-    REQUIRE(value_result == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("session_id") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("abc123def456ghi789jkl012mno345pqr678stu901vwx234yz") == CookieStatus::Ok);
 }
 
 TEST_CASE("Cookie set_value: special characters", "[cookie][size]") {
-    slim::common::http::Cookie cookie;
-    const std::string value(4096, '\x42');   // all 'B'
-    const auto result = cookie.set_value(value);
-    REQUIRE(result == COOKIE::STATUS::OK);
+    Cookie cookie;
+    const std::string value(4096, '\x42');
+    REQUIRE(cookie.set_value(value) == CookieStatus::Ok);
 }
 
 TEST_CASE("Cookie Serialize - Basic Name and Value", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("session") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("xyz123") == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("session") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("xyz123") == CookieStatus::Ok);
 
     std::string expected = "Set-Cookie: session=xyz123\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
 TEST_CASE("Cookie Serialize - With Domain Attribute", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_domain("example.com") == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("id") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("42") == CookieStatus::Ok);
+    REQUIRE(cookie.set_domain("example.com") == CookieStatus::Ok);
 
     std::string expected = "Set-Cookie: id=42; Domain=example.com\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
 TEST_CASE("Cookie Serialize - With Path Attribute", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_path("/api") == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("id") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("42") == CookieStatus::Ok);
+    REQUIRE(cookie.set_path("/api") == CookieStatus::Ok);
 
     std::string expected = "Set-Cookie: id=42; Path=/api\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
 TEST_CASE("Cookie Serialize - With Expires Attribute", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_expires("Wed, 21 Oct 2015 07:28:00 GMT") == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("id") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("42") == CookieStatus::Ok);
+    REQUIRE(cookie.set_expires("Wed, 21 Oct 2015 07:28:00 GMT") == CookieStatus::Ok);
 
     std::string expected = "Set-Cookie: id=42; Expires=Wed, 21 Oct 2015 07:28:00 GMT\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
 TEST_CASE("Cookie Serialize - With SameSite Attribute", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_same_site("Lax") == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("id") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("42") == CookieStatus::Ok);
+    REQUIRE(cookie.set_same_site("Lax") == CookieStatus::Ok);
 
     std::string expected = "Set-Cookie: id=42; SameSite=Lax\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
 TEST_CASE("Cookie Serialize - With Boolean Security Flags", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("id") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("42") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_same_site("none") == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("id") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("42") == CookieStatus::Ok);
+    REQUIRE(cookie.set_same_site("none") == CookieStatus::Ok);
 
-    cookie.set_secure(true);
-    cookie.set_httponly(true);
-    cookie.set_partitioned(true);
+    cookie.set_secure("true");
+    cookie.set_httponly("true");
+    cookie.set_partitioned("true");
 
     std::string expected = "Set-Cookie: id=42; SameSite=none; Secure; HttpOnly; Partitioned\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
 TEST_CASE("Cookie Serialize - Single Digit Max-Age", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("timeout") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("active") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_max_age(0) == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("timeout") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("active") == CookieStatus::Ok);
+    REQUIRE(cookie.set_max_age(0) == CookieStatus::Ok);
 
     std::string expected = "Set-Cookie: timeout=active; Max-Age=0\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
 TEST_CASE("Cookie Serialize - Multi Digit Max-Age", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("timeout") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("active") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_max_age(3600) == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("timeout") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("active") == CookieStatus::Ok);
+    REQUIRE(cookie.set_max_age(3600) == CookieStatus::Ok);
 
     std::string expected = "Set-Cookie: timeout=active; Max-Age=3600\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
 TEST_CASE("Cookie Serialize - Large Max-Age String Input", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("timeout") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("active") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_max_age("31536000") == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("timeout") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("active") == CookieStatus::Ok);
+    REQUIRE(cookie.set_max_age("31536000") == CookieStatus::Ok);
 
     std::string expected = "Set-Cookie: timeout=active; Max-Age=31536000\r\n";
     REQUIRE(cookie.serialize() == expected);
 }
 
 TEST_CASE("Cookie Serialize - Complex Multi-Attribute Validation Pass", "[cookie][serialize]") {
-    slim::common::http::Cookie cookie;
-    REQUIRE(cookie.set_name("__Secure-user_tracker") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_value("hash_payload_alpha_9") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_domain("sub.domain.org") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_path("/") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_expires("Tue, 19 Jan 2038 03:14:07 GMT") == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_max_age(86400) == COOKIE::STATUS::OK);
-    REQUIRE(cookie.set_same_site("None") == COOKIE::STATUS::OK);
+    Cookie cookie;
+    REQUIRE(cookie.set_name("__Secure-user_tracker") == CookieStatus::Ok);
+    REQUIRE(cookie.set_value("hash_payload_alpha_9") == CookieStatus::Ok);
+    REQUIRE(cookie.set_domain("sub.domain.org") == CookieStatus::Ok);
+    REQUIRE(cookie.set_path("/") == CookieStatus::Ok);
+    REQUIRE(cookie.set_expires("Tue, 19 Jan 2038 03:14:07 GMT") == CookieStatus::Ok);
+    REQUIRE(cookie.set_max_age(86400) == CookieStatus::Ok);
+    REQUIRE(cookie.set_same_site("None") == CookieStatus::Ok);
 
-    cookie.set_secure(true);
-    cookie.set_httponly(true);
-    cookie.set_partitioned(true);
+    cookie.set_secure("true");
+    cookie.set_httponly("true");
+    cookie.set_partitioned("true");
 
-    // Explicit structural cross-validation check pass
-    REQUIRE(cookie.validate() == COOKIE::STATUS::OK);
+    REQUIRE(cookie.validate() == CookieStatus::Ok);
 
     std::string expected = "Set-Cookie: __Secure-user_tracker=hash_payload_alpha_9"
                            "; Domain=sub.domain.org"
@@ -890,186 +820,36 @@ TEST_CASE("Cookie Serialize - Complex Multi-Attribute Validation Pass", "[cookie
 }
 
 TEST_CASE("domain with all-digit TLD is rejected", "[domain][tld]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("example.123") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+    Cookie cookie;
+    CHECK(cookie.set_domain("example.123") == CookieStatus::DomainNumericTld);
 }
 
 TEST_CASE("domain with multi-label all-digit TLD is rejected", "[domain][tld]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("foo.bar.456") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+    Cookie cookie;
+    CHECK(cookie.set_domain("foo.bar.456") == CookieStatus::DomainNumericTld);
 }
 
 TEST_CASE("domain with single-digit TLD is rejected", "[domain][tld]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("test.0") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+    Cookie cookie;
+    CHECK(cookie.set_domain("test.0") == CookieStatus::DomainNumericTld);
 }
 
 TEST_CASE("domain with digit-suffixed TLD is rejected", "[domain][tld]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("example.co1") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+    Cookie cookie;
+    CHECK(cookie.set_domain("example.co1") == CookieStatus::DomainNumericTld);
 }
 
 TEST_CASE("domain with digit-prefixed TLD is rejected", "[domain][tld]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("example.1com") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+    Cookie cookie;
+    CHECK(cookie.set_domain("example.1com") == CookieStatus::DomainNumericTld);
 }
 
 TEST_CASE("domain with digit embedded in TLD is rejected", "[domain][tld]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("example.c0m") == COOKIE::STATUS::DOMAIN_NUMERIC_TLD);
+    Cookie cookie;
+    CHECK(cookie.set_domain("example.c0m") == CookieStatus::DomainNumericTld);
 }
 
-TEST_CASE("digits in non-TLD labels are allowed", "[domain][tld]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("sub1.example.com") == COOKIE::STATUS::OK);
-    CHECK(cookie.set_domain("123.example.com")  == COOKIE::STATUS::OK);
-    CHECK(cookie.set_domain("a1b2.foo3.com")    == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("valid alphabetic TLD is accepted", "[domain][tld]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("example.com")   == COOKIE::STATUS::OK);
-    CHECK(cookie.set_domain("example.co.uk") == COOKIE::STATUS::OK);
-    CHECK(cookie.set_domain("my-site.io")    == COOKIE::STATUS::OK);
-}
-
-TEST_CASE("domain with leading hyphen in label is rejected", "[domain][hyphen]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("-example.com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
-}
-
-TEST_CASE("domain with trailing hyphen in label is rejected", "[domain][hyphen]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("example-.com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
-}
-
-TEST_CASE("domain with leading hyphen in subdomain is rejected", "[domain][hyphen]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("sub.-example.com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
-}
-
-TEST_CASE("domain with trailing hyphen in subdomain is rejected", "[domain][hyphen]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("sub-.example.com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
-}
-
-TEST_CASE("domain with leading hyphen in TLD is rejected", "[domain][hyphen]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("example.-com") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
-}
-
-TEST_CASE("domain with trailing hyphen in TLD is rejected", "[domain][hyphen]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("example.com-") == COOKIE::STATUS::DOMAIN_LABEL_INVALID_HYPHEN);
-}
-
-TEST_CASE("domain with hyphen in valid position is accepted", "[domain][hyphen]") {
-    slim::common::http::Cookie cookie;
-    CHECK(cookie.set_domain("my-site.com")        == COOKIE::STATUS::OK);
-    CHECK(cookie.set_domain("my-site.example.com") == COOKIE::STATUS::OK);
-    CHECK(cookie.set_domain("a-b-c.example.com")  == COOKIE::STATUS::OK);
-}
-
-// Base overhead: 12 ("Set-Cookie: ") + 2 ("\r\n") + 1 ("=") = 15
-// With name "a" (1 byte): 16 bytes fixed, leaving 4080 for value before hitting 4096
-
-TEST_CASE("Cookie exactly at 4096 bytes does not throw") {
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4080, 'x'));   // 16 + 4080 = 4096
-    REQUIRE_NOTHROW(c.serialize());
-}
-
-TEST_CASE("Cookie one byte over 4096 throws") {
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4081, 'x'));   // 16 + 4081 = 4097
-    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
-}
-
-TEST_CASE("Cookie over limit throws CookieException with COOKIE_TOO_LARGE message") {
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4081, 'x'));
-    try {
-        c.serialize();
-        FAIL("Expected CookieException was not thrown");
-    } catch (const slim::common::http::CookieException& ex) {
-        REQUIRE(std::string(ex.what()).find(COOKIE::status_string(COOKIE::STATUS::COOKIE_TOO_LARGE)) != std::string::npos);
-    }
-}
-
-TEST_CASE("Cookie pushed over limit by Domain attribute throws") {
-    // 16 + 4071 + 9 ("; Domain=") + 1 = 4097
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4071, 'x'));
-    c.set_domain("z");
-    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
-}
-
-TEST_CASE("Cookie pushed over limit by Path attribute throws") {
-    // 16 + 4073 + 7 ("; Path=") + 1 = 4097
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4073, 'x'));
-    c.set_path("/");
-    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
-}
-
-TEST_CASE("Cookie pushed over limit by Max-Age attribute throws") {
-    // 16 + 4070 + 10 ("; Max-Age=") + 1 (digit) = 4097
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4070, 'x'));
-    c.set_max_age(1);
-    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
-}
-
-TEST_CASE("Cookie pushed over limit by SameSite attribute throws") {
-    // 16 + 4069 + 11 ("; SameSite=") + 1 = 4097
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4069, 'x'));
-    c.set_same_site("Lax");
-    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
-}
-
-TEST_CASE("Cookie pushed over limit by Secure flag throws") {
-    // 16 + 4072 + 8 ("; Secure") = 4096 — still OK
-    // 16 + 4073 + 8 = 4097 — throws
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4073, 'x'));
-    c.set_secure(true);
-    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
-}
-
-TEST_CASE("Cookie pushed over limit by HttpOnly flag throws") {
-    // 16 + 4070 + 10 ("; HttpOnly") = 4096 — still OK
-    // 16 + 4071 + 10 = 4097 — throws
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4071, 'x'));
-    c.set_httponly(true);
-    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
-}
-
-TEST_CASE("Cookie pushed over limit by Partitioned flag throws") {
-    // "; Secure" (8) + "; SameSite=None" (15) + "; Partitioned" (13) = 36
-    // 16 + value + 36 = 4097 → value = 4045
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(4045, 'x'));
-    c.set_secure(true);
-    c.set_same_site("None");
-    c.set_partitioned(true);
-    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
-}
-
-TEST_CASE("Massively oversized cookie throws") {
-    slim::common::http::Cookie c;
-    c.set_name("a");
-    c.set_value(std::string(8192, 'x'));
-    REQUIRE_THROWS_AS(c.serialize(), slim::common::http::CookieException);
+TEST_CASE("digits in non-TLD labels are accepted", "[domain][tld]") {
+    Cookie cookie;
+    CHECK(cookie.set_domain("test1.example.com") == CookieStatus::Ok);
 }
