@@ -66,8 +66,8 @@ constexpr void trim(std::string_view& s) noexcept {
 
 constexpr CookieStatus get_bool(std::string_view s, bool& b) noexcept {
     trim(s);
-    if (iequals(s, "true")) { b = true; return CookieStatus::Ok; }
-    if (iequals(s, "false")) { b = false; return CookieStatus::Ok; }
+    if (iequals(s, "true")) { b = true; return CookieStatus::OK; }
+    if (iequals(s, "false")) { b = false; return CookieStatus::OK; }
     return CookieStatus::InvalidBoolean;
 }
 
@@ -107,7 +107,7 @@ constexpr CookieStatus validate_domain(std::string_view& s) noexcept {
         rem.remove_prefix(dot == std::string_view::npos ? rem.size() : dot + 1);
     }
     if (had_leading_dot) s = std::string_view(s.data() - 1, s.size() + 1);
-    return CookieStatus::Ok;
+    return CookieStatus::OK;
 }
 
 constexpr CookieStatus validate_expires(std::string_view& s, std::optional<std::string>& expires) noexcept {
@@ -191,18 +191,18 @@ constexpr CookieStatus validate_expires(std::string_view& s, std::optional<std::
     expires->push_back(static_cast<char>('0' + (second / 10)));
     expires->push_back(static_cast<char>('0' + (second % 10)));
     expires->append(" GMT");
-    return CookieStatus::Ok;
+    return CookieStatus::OK;
 }
 
 constexpr CookieStatus validate_path(std::string_view& s) noexcept {
     trim(s);
-    if (s.empty()) return CookieStatus::Ok;
+    if (s.empty()) return CookieStatus::OK;
     if (s.front() != '/') return CookieStatus::PathMissingLeadingSlash;
     for (char c : s) {
         unsigned char uc = static_cast<unsigned char>(c);
         if (uc <= 0x1F || uc == 0x7F || c == ';') return CookieStatus::PathInvalidChar;
     }
-    return CookieStatus::Ok;
+    return CookieStatus::OK;
 }
 
 constexpr CookieStatus validate_prefixes(std::string_view name, const std::optional<std::string>& domain,
@@ -210,18 +210,18 @@ constexpr CookieStatus validate_prefixes(std::string_view name, const std::optio
     if (name.empty()) return CookieStatus::NameEmpty;
     const bool is_secure_prefix = name.starts_with("__Secure-");
     const bool is_host_prefix   = name.starts_with("__Host-");
-    if (!is_secure_prefix && !is_host_prefix) return CookieStatus::Ok;
+    if (!is_secure_prefix && !is_host_prefix) return CookieStatus::OK;
     if (!secure) return CookieStatus::NamePrefixRequiresSecure;
     if (is_host_prefix) {
         if (domain.has_value() && !domain->empty()) return CookieStatus::NameHostPrefixHasDomain;
         if (!path.has_value() || path.value() != "/") return CookieStatus::NameHostPrefixInvalidPath;
     }
-    return CookieStatus::Ok;
+    return CookieStatus::OK;
 }
 
 constexpr CookieStatus validate_max_age(std::uint_least64_t v) noexcept {
     return (v > static_cast<std::uint_least64_t>(std::numeric_limits<std::time_t>::max()))
-           ? CookieStatus::MaxAgeExceedsLimit : CookieStatus::Ok;
+           ? CookieStatus::MaxAgeExceedsLimit : CookieStatus::OK;
 }
 
 constexpr CookieStatus get_max_age_value(std::string_view& s, std::optional<std::uint_least64_t>& v) noexcept {
@@ -233,8 +233,8 @@ constexpr CookieStatus get_max_age_value(std::string_view& s, std::optional<std:
     auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), temp_value);
     if (ec != std::errc{}) return CookieStatus::MaxAgeInvalidFormat;
     if (ptr != s.data() + s.size()) return CookieStatus::MaxAgeTrailingChars;
-    if(is_negative) { v = 0; return CookieStatus::Ok; }
-    else { CookieStatus e = validate_max_age(temp_value); if(e == CookieStatus::Ok) v = temp_value; return e; }
+    if(is_negative) { v = 0; return CookieStatus::OK; }
+    else { CookieStatus e = validate_max_age(temp_value); if(e == CookieStatus::OK) v = temp_value; return e; }
 }
 
 constexpr CookieStatus validate_name(std::string_view& s) noexcept {
@@ -249,7 +249,7 @@ constexpr CookieStatus validate_name(std::string_view& s) noexcept {
             case '{': case '}': return CookieStatus::NameInvalidChar;
         }
     }
-    return CookieStatus::Ok;
+    return CookieStatus::OK;
 }
 
 constexpr CookieStatus validate_partitioned(bool partitioned, bool secure,
@@ -258,38 +258,38 @@ constexpr CookieStatus validate_partitioned(bool partitioned, bool secure,
         if(!secure) return CookieStatus::PartitionedRequiresSecure;
         if(!same_site || !iequals(*same_site, "none")) return CookieStatus::PartitionedRequiresSameSiteNone;
     }
-    return CookieStatus::Ok;
+    return CookieStatus::OK;
 }
 
 constexpr CookieStatus validate_secure(const std::optional<std::string>& same_site, bool secure) noexcept {
-    if(!same_site.has_value()) return CookieStatus::Ok;
-    return (iequals(same_site.value(), "none") && !secure) ? CookieStatus::SameSiteNoneRequiresSecure : CookieStatus::Ok;
+    if(!same_site.has_value()) return CookieStatus::OK;
+    return (iequals(same_site.value(), "none") && !secure) ? CookieStatus::SameSiteNoneRequiresSecure : CookieStatus::OK;
 }
 
 constexpr CookieStatus validate_same_site(std::string_view& s) noexcept {
     trim(s);
-    if (iequals(s, "strict") || iequals(s, "lax") || iequals(s, "none")) return CookieStatus::Ok;
+    if (iequals(s, "strict") || iequals(s, "lax") || iequals(s, "none")) return CookieStatus::OK;
     return CookieStatus::SameSiteInvalid;
 }
 
 constexpr CookieStatus validate_value(std::string_view& s) noexcept {
     trim(s);
-    if (s.empty()) return CookieStatus::Ok;
+    if (s.empty()) return CookieStatus::OK;
     if (s.front() == '"') {
         if (s.size() < 2 || s.back() != '"') return CookieStatus::ValueUnmatchedQuote;
         s.remove_prefix(1); s.remove_suffix(1);
     }
     for (char c : s) { if (!ascii.is_cookie_char[static_cast<unsigned char>(c)]) return CookieStatus::ValueInvalidChar; }
-    return CookieStatus::Ok;
+    return CookieStatus::OK;
 }
 
 } // namespace
 
 Cookie::Cookie(std::string_view n, std::string_view v) {
     auto e = set_name(n);
-    if (e != CookieStatus::Ok) throw(CookieException(e));
+    if (e != CookieStatus::OK) throw(CookieException(e));
     e = set_value(v);
-    if (e != CookieStatus::Ok) throw(CookieException(e));
+    if (e != CookieStatus::OK) throw(CookieException(e));
 }
 
 bool Cookie::operator==(const Cookie& other) const noexcept {
@@ -298,7 +298,7 @@ bool Cookie::operator==(const Cookie& other) const noexcept {
 
 CookieStatus Cookie::set_domain(std::string_view s) noexcept {
     auto e = validate_domain(s);
-    if(e == CookieStatus::Ok) domain = std::string(s);
+    if(e == CookieStatus::OK) domain = std::string(s);
     return e;
 }
 
@@ -308,7 +308,7 @@ CookieStatus Cookie::set_expires(std::string_view s) noexcept {
 
 CookieStatus Cookie::set_max_age(std::uint_least64_t v) noexcept {
     auto e = validate_max_age(v);
-    if(e == CookieStatus::Ok) max_age = v;
+    if(e == CookieStatus::OK) max_age = v;
     return e;
 }
 
@@ -318,25 +318,25 @@ CookieStatus Cookie::set_max_age(std::string_view s) noexcept {
 
 CookieStatus Cookie::set_name(std::string_view s) noexcept {
     auto e = validate_name(s);
-    if (e == CookieStatus::Ok) name = std::string(s);
+    if (e == CookieStatus::OK) name = std::string(s);
     return e;
 }
 
 CookieStatus Cookie::set_path(std::string_view s) noexcept {
     auto e = validate_path(s);
-    if(e == CookieStatus::Ok) path = std::string(s);
+    if(e == CookieStatus::OK) path = std::string(s);
     return e;
 }
 
 CookieStatus Cookie::set_value(std::string_view s) noexcept {
     auto e = validate_value(s);
-    if (e == CookieStatus::Ok) value = std::string(s);
+    if (e == CookieStatus::OK) value = std::string(s);
     return e;
 }
 
 CookieStatus Cookie::set_same_site(std::string_view s) noexcept {
     auto e = validate_same_site(s);
-    if(e == CookieStatus::Ok) same_site = std::string(s);
+    if(e == CookieStatus::OK) same_site = std::string(s);
     return e;
 }
 
@@ -346,17 +346,17 @@ CookieStatus Cookie::set_secure(std::string_view s) noexcept { return get_bool(s
 
 CookieStatus Cookie::validate() const noexcept {
     auto e = validate_secure(same_site, secure);
-    if(e != CookieStatus::Ok) return e;
+    if(e != CookieStatus::OK) return e;
     e = validate_partitioned(partitioned, secure, same_site);
-    if(e != CookieStatus::Ok) return e;
+    if(e != CookieStatus::OK) return e;
     e = validate_prefixes(name, domain, path, secure);
-    if(e != CookieStatus::Ok) return e;
-    return CookieStatus::Ok;
+    if(e != CookieStatus::OK) return e;
+    return CookieStatus::OK;
 }
 
 std::string Cookie::serialize() const {
     auto e = validate();
-    if(e != CookieStatus::Ok) throw(CookieException(e));
+    if(e != CookieStatus::OK) throw(CookieException(e));
     std::size_t total_size = 12 + 2 + name.size() + 1 + value.size();
     if (domain) total_size += 9 + domain->size();
     if (path) total_size += 7 + path->size();

@@ -14,7 +14,7 @@
 namespace slim::common::http {
 
 enum class CookieStatus : uint8_t {
-    Ok = 0,
+    OK = 0,
     CookieTooLarge,
     DomainBareDot,
     DomainEmpty,
