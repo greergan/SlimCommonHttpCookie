@@ -1,0 +1,32 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    container:
+      image: slim-toolchain:latest
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+
+      - name: Checkout SlimLibraryPackager
+        uses: actions/checkout@v4
+        with:
+          repository: greergan/SlimLibraryPackager
+          path: SlimLibraryPackager
+
+      - name: Update env
+        run: |
+          chmod +x ./SlimLibraryPackager/update_env.sh
+          ./SlimLibraryPackager/update_env.sh
+
+      - name: Build
+        run: |
+          make RELEASE_TYPE=Release SHARED_ONLY=OFF
