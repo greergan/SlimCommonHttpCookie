@@ -49,36 +49,36 @@ enum class CookieStatus : uint8_t {
 
 namespace cookie::status {
     constexpr std::array<std::string_view, static_cast<std::size_t>(CookieStatus::Count)> strings = {
-        "OK",
-        "Cookie exceeds the maximum allowed size",
-        "Domain cannot consist of a bare dot",
-        "Domain name cannot be empty",
-        "Domain contains an invalid character",
-        "Domain label cannot be empty",
-        "Domain label has a hyphen in an invalid position",
-        "Domain label exceeds the maximum allowed length",
-        "Top-level domain (TLD) must not be numeric",
-        "Domain name exceeds the maximum allowed length",
-        "Domain name must not end with a trailing dot",
-        "Expires attribute has an invalid date format",
-        "Expected a valid boolean value",
-        "Max-Age attribute cannot be empty",
-        "Max-Age value exceeds the maximum allowed limit",
-        "Max-Age attribute has an invalid format",
-        "Max-Age value has unexpected trailing characters",
-        "Cookie name cannot be empty",
-        "The __Host- prefix cannot be combined with a Domain attribute",
-        "The __Host- prefix requires the Path attribute to be '/'",
-        "Cookie name contains an invalid character",
-        "Cookie name prefix requires the Secure attribute",
-        "Partitioned cookies require SameSite=None",
-        "Partitioned cookies require the Secure attribute",
-        "Path contains an invalid character",
-        "Path must begin with a forward slash ('/')",
-        "SameSite attribute has an invalid value",
-        "SameSite=None requires the Secure attribute",
-        "Cookie value contains an invalid character",
-        "Cookie value has an unmatched quotation mark"
+        "OK",                                                              // OK
+        "Cookie exceeds the maximum allowed size",                         // CookieTooLarge
+        "Domain cannot consist of a bare dot",                             // DomainBareDot
+        "Domain name cannot be empty",                                     // DomainEmpty
+        "Domain contains an invalid character",                            // DomainInvalidChar
+        "Domain label cannot be empty",                                    // DomainLabelEmpty
+        "Domain label has a hyphen in an invalid position",                // DomainLabelInvalidHyphen
+        "Domain label exceeds the maximum allowed length",                 // DomainLabelTooLong
+        "Top-level domain (TLD) must not be numeric",                      // DomainNumericTld
+        "Domain name exceeds the maximum allowed length",                  // DomainTooLong
+        "Domain name must not end with a trailing dot",                    // DomainTrailingDot
+        "Expires attribute has an invalid date format",                    // ExpiresInvalidFormat
+        "Expected a valid boolean value",                                  // InvalidBoolean
+        "Max-Age attribute cannot be empty",                               // MaxAgeEmpty
+        "Max-Age value exceeds the maximum allowed limit",                 // MaxAgeExceedsLimit
+        "Max-Age attribute has an invalid format",                         // MaxAgeInvalidFormat
+        "Max-Age value has unexpected trailing characters",                // MaxAgeTrailingChars
+        "Cookie name cannot be empty",                                     // NameEmpty
+        "The __Host- prefix cannot be combined with a Domain attribute",   // NameHostPrefixHasDomain
+        "The __Host- prefix requires the Path attribute to be '/'",        // NameHostPrefixInvalidPath
+        "Cookie name contains an invalid character",                       // NameInvalidChar
+        "Cookie name prefix requires the Secure attribute",                // NamePrefixRequiresSecure
+        "Partitioned cookies require SameSite=None",                       // PartitionedRequiresSameSiteNone
+        "Partitioned cookies require the Secure attribute",                // PartitionedRequiresSecure
+        "Path contains an invalid character",                              // PathInvalidChar
+        "Path must begin with a forward slash ('/')",                      // PathMissingLeadingSlash
+        "SameSite attribute has an invalid value",                         // SameSiteInvalid
+        "SameSite=None requires the Secure attribute",                     // SameSiteNoneRequiresSecure
+        "Cookie value contains an invalid character",                      // ValueInvalidChar
+        "Cookie value has an unmatched quotation mark"                     // ValueUnmatchedQuote
     };
 
     [[nodiscard]] constexpr std::string_view to_string(CookieStatus status) noexcept {
