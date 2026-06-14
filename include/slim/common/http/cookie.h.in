@@ -80,18 +80,18 @@ namespace cookie::status {
         "Cookie value contains an invalid character",
         "Cookie value has an unmatched quotation mark"
     };
+
+    [[nodiscard]] constexpr std::string_view to_string(CookieStatus status) noexcept {
+        const auto index = static_cast<std::size_t>(status);
+        if (index < strings.size()) return strings[index];
+        return "Unknown";
+    }
 }
 
 class CookieException : public std::logic_error {
 public:
-    explicit CookieException(CookieStatus e) : std::logic_error("Invalid Cookie: " + std::string{to_string(e)}) {}
+    explicit CookieException(CookieStatus e) : std::logic_error("Invalid Cookie: " + std::string{cookie::status::to_string(e)}) {}
     explicit CookieException(std::string msg) : std::logic_error(msg) {}
-private:
-    [[nodiscard]] constexpr std::string_view to_string(CookieStatus status) noexcept {
-        const auto index = static_cast<std::size_t>(status);
-        if (index < cookie::status::strings.size()) return cookie::status::strings[index];
-        return "Unknown";
-    }
 };
 
 class Cookie {
