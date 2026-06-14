@@ -25,8 +25,13 @@ enum class CookieStatus : uint8_t {
     DomainNumericTld,
     DomainTooLong,
     DomainTrailingDot,
+    EmptyCookieString,
     ExpiresInvalidFormat,
     InvalidBoolean,
+    InvalidCookieName,
+    InvalidCookieValue,
+    MalformedCookieMissingEquals,
+    MalformedCookiePairMissingEquals,
     MaxAgeEmpty,
     MaxAgeExceedsLimit,
     MaxAgeInvalidFormat,
@@ -60,8 +65,13 @@ namespace cookie::status {
         "Top-level domain (TLD) must not be numeric",                      // DomainNumericTld
         "Domain name exceeds the maximum allowed length",                  // DomainTooLong
         "Domain name must not end with a trailing dot",                    // DomainTrailingDot
+        "Cookie string cannot be empty",                                   // EmptyCookieString
         "Expires attribute has an invalid date format",                    // ExpiresInvalidFormat
         "Expected a valid boolean value",                                  // InvalidBoolean
+        "Cookie name is invalid",                                          // InvalidCookieName
+        "Cookie value is invalid",                                         // InvalidCookieValue
+        "Malformed cookie: missing '=' separator",                         // MalformedCookieMissingEquals
+        "Malformed cookie pair: missing '=' separator",                    // MalformedCookiePairMissingEquals
         "Max-Age attribute cannot be empty",                               // MaxAgeEmpty
         "Max-Age value exceeds the maximum allowed limit",                 // MaxAgeExceedsLimit
         "Max-Age attribute has an invalid format",                         // MaxAgeInvalidFormat
