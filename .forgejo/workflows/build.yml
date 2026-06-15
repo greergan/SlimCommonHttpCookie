@@ -24,6 +24,7 @@ jobs:
         with:
           repository: greergan/SlimLibraryPackager
           path: SlimLibraryPackager
+          ref: master
 
       - name: Update env
         run: |
