@@ -73,3 +73,17 @@ jobs:
               echo "No matching artifact found for: $file"
             fi
           done
+
+        - name: Link Package to Repository
+        run: |
+          URL="${{ github.server_url }}/api/v1/packages"
+          OWNER="${{ github.repository_owner }}"
+          PKG="slim"
+          VER="${{ github.ref_name }}"
+          REPO_ID="${{ github.repository_id }}"
+          
+          curl -X POST "$URL/$OWNER/generic/$PKG/$VER/repository" \
+            -H "Authorization: token ${{ secrets.FORGEJO_TOKEN }}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d "{\"repository_id\": \"$REPO_ID\"}"
