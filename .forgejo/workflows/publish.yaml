@@ -46,7 +46,7 @@ jobs:
 
       - name: Build
         run: |
-          make RELEASE_TYPE=Release SHARED_ONLY=OFF
+          make packages
 
       - name: Publish to Forgejo Registry
         run: |
