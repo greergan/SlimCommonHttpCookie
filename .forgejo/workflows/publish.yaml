@@ -66,7 +66,7 @@ jobs:
             fi
           done
 
-    - name: Link Package to Repository
+      - name: Link Package to Repository
         run: |
           # Use the repository ID in the payload as required by Forgejo
           URL="${{ secrets.REGISTRY_URL }}/api/v1/packages/${{ github.repository_owner }}/generic/${{ github.event.repository.name }}/${{ env.VERSION }}/repository"
