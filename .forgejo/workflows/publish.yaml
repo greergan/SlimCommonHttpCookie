@@ -35,7 +35,6 @@ jobs:
           if [[ -n "${{ github.event.inputs.version }}" ]]; then
             echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
           else
-            # Strips 'v' from the tag name
             echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
           fi
 
@@ -44,9 +43,9 @@ jobs:
           chmod +x ./SlimLibraryPackager/update_env.sh
           ./SlimLibraryPackager/update_env.sh
 
-      - name: Build
+      - name: Build Packages
         run: |
-          make RELEASE_TYPE=Release SHARED_ONLY=OFF
+          make packages
 
       - name: Publish to Forgejo Registry
         run: |
@@ -69,7 +68,6 @@ jobs:
 
       - name: Link Package to Repository
         run: |
-          # Links the uploaded package version to the current repository
           URL="${{ secrets.REGISTRY_URL }}/api/v1/packages/${{ github.repository_owner }}/generic/${{ github.event.repository.name }}/${{ env.VERSION }}/repository"
           
           curl -X POST "$URL" \
