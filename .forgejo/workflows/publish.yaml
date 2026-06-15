@@ -1,0 +1,66 @@
+name: build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., v1.0.1)'
+        required: true
+
+jobs:
+  build-and-publish:
+    runs-on: self-hosted
+    container:
+      image: slim-toolchain
+      options: --privileged
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Checkout SlimLibraryPackager
+        uses: actions/checkout@v4
+        with:
+          repository: greergan/SlimLibraryPackager
+          path: SlimLibraryPackager
+          ref: master
+
+      - name: Determine Version
+        run: |
+          if [[ $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+          fi
+
+      - name: Update env
+        run: |
+          chmod +x ./SlimLibraryPackager/update_env.sh
+          ./SlimLibraryPackager/update_env.sh
+
+      - name: Build
+        run: |
+          make RELEASE_TYPE=Release SHARED_ONLY=OFF
+
+      - name: Publish to Forgejo Registry
+        env:
+          # Base registry URL for this package version
+          BASE_URL: ${{ secrets.FORGEJO_URL }}/api/packages/${{ github.repository_owner }}/generic/${{ github.event.repository.name }}/${{ env.VERSION }}
+        run: |
+          # Iterate over artifacts specifically in the dist/ directory
+          for file in dist/*.deb dist/*.rpm; do
+            if [ -f "$file" ]; then
+              # Extract just the filename for the upload URL
+              FILENAME=$(basename "$file")
+              echo "Publishing $FILENAME to $BASE_URL/$FILENAME..."
+              
+              curl --user ${{ secrets.FORGEJO_USER }}:${{ secrets.FORGEJO_TOKEN }} \
+                   --upload-file "$file" \
+                   "$BASE_URL/$FILENAME"
+            fi
+          done
