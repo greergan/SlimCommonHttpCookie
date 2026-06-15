@@ -46,24 +46,30 @@ jobs:
 
       - name: Build
         run: |
-          make packages
+          make RELEASE_TYPE=Release SHARED_ONLY=OFF
 
       - name: Publish to Forgejo Registry
-        env:
-          # Using non-reserved secret names
-          BASE_URL: "${{ secrets.REGISTRY_URL }}/api/packages/${{ github.repository_owner }}\
-            /generic/${{ github.event.repository.name }}/${{ env.VERSION }}"
         run: |
-          # Iterate through all .deb and .rpm files in the dist/ directory
+          echo "Verifying artifacts in dist/ directory:"
+          ls -la dist/ || true
+          
+          # Constructing the URL inside shell to prevent multi-line YAML issues
+          REG_URL="${{ secrets.REGISTRY_URL }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          BASE_URL="$REG_URL/api/packages/$OWNER/generic/$REPO/$VERSION"
+          
           for file in dist/*.deb dist/*.rpm; do
             if [ -f "$file" ]; then
               FILENAME=$(basename "$file")
-              echo "Publishing $FILENAME to the registry..."
+              echo "Publishing $FILENAME to $BASE_URL/$FILENAME..."
               
-              curl --user ${{ secrets.REGISTRY_USER }}:${{ secrets.REGISTRY_TOKEN }} \
+              # --fail forces curl to return a non-zero exit code on HTTP errors
+              curl --fail -sS \
+                   --user "${{ secrets.REGISTRY_USER }}:${{ secrets.REGISTRY_TOKEN }}" \
                    --upload-file "$file" \
                    "$BASE_URL/$FILENAME"
             else
-              echo "No artifacts found in dist/ to publish."
+              echo "No matching artifact found for: $file"
             fi
           done
