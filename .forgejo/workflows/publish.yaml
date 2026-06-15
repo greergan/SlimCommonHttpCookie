@@ -46,14 +46,10 @@ jobs:
 
       - name: Build
         run: |
-          make packages
+          make RELEASE_TYPE=Release SHARED_ONLY=OFF
 
       - name: Publish to Forgejo Registry
         run: |
-          echo "Verifying artifacts in dist/ directory:"
-          ls -la dist/ || true
-          
-          # Constructing the URL inside shell to prevent multi-line YAML issues
           REG_URL="${{ secrets.REGISTRY_URL }}"
           OWNER="${{ github.repository_owner }}"
           REPO="${{ github.event.repository.name }}"
@@ -62,28 +58,22 @@ jobs:
           for file in dist/*.deb dist/*.rpm; do
             if [ -f "$file" ]; then
               FILENAME=$(basename "$file")
-              echo "Publishing $FILENAME to $BASE_URL/$FILENAME..."
+              echo "Publishing $FILENAME to the registry..."
               
-              # --fail forces curl to return a non-zero exit code on HTTP errors
               curl --fail -sS \
                    --user "${{ secrets.REGISTRY_USER }}:${{ secrets.REGISTRY_TOKEN }}" \
                    --upload-file "$file" \
                    "$BASE_URL/$FILENAME"
-            else
-              echo "No matching artifact found for: $file"
             fi
           done
 
-        - name: Link Package to Repository
+      - name: Link Package to Repository
         run: |
-          URL="${{ github.server_url }}/api/v1/packages"
-          OWNER="${{ github.repository_owner }}"
-          PKG="slim"
-          VER="${{ github.ref_name }}"
-          REPO_ID="${{ github.repository_id }}"
+          # Links the uploaded package version to the current repository
+          URL="${{ secrets.REGISTRY_URL }}/api/v1/packages/${{ github.repository_owner }}/generic/${{ github.event.repository.name }}/${{ env.VERSION }}/repository"
           
-          curl -X POST "$URL/$OWNER/generic/$PKG/$VER/repository" \
-            -H "Authorization: token ${{ secrets.FORGEJO_TOKEN }}" \
+          curl -X POST "$URL" \
+            -H "Authorization: token ${{ secrets.REGISTRY_TOKEN }}" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            -d "{\"repository_id\": \"$REPO_ID\"}"
+            -d "{\"repository_id\": ${{ github.repository_id }}}"
