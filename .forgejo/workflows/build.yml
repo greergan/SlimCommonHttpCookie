@@ -2,8 +2,8 @@ name: build
 
 on:
   push:
-    branches: [main]
-  pull_request:
+    branches: [master]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -11,6 +11,7 @@ jobs:
 
     container:
       image: slim-toolchain:latest
+      options: --privileged
 
     steps:
       - name: Checkout main repo
@@ -23,6 +24,7 @@ jobs:
           path: SlimLibraryPackager
 
       - name: Update env
+        working-directory: ${{ github.workspace }}
         run: |
           chmod +x ./SlimLibraryPackager/update_env.sh
           ./SlimLibraryPackager/update_env.sh
