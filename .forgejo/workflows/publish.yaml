@@ -8,7 +8,7 @@ on:
     inputs:
       version:
         description: 'Version to publish (e.g., 1.0.1)'
-        required: true
+        required: false
 
 jobs:
   build-and-publish:
@@ -32,7 +32,7 @@ jobs:
 
       - name: Determine Version
         run: |
-          if [[ $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
+          if [[ -n "${{ github.event.inputs.version }}" ]]; then
             echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
           else
             # Strips 'v' from the tag name
@@ -51,7 +51,8 @@ jobs:
       - name: Publish to Forgejo Registry
         env:
           # Using non-reserved secret names
-          BASE_URL: ${{ secrets.REGISTRY_URL }}/api/packages/${{ github.repository_owner }}/generic/${{ github.event.repository.name }}/${{ env.VERSION }}
+          BASE_URL: "${{ secrets.REGISTRY_URL }}/api/packages/${{ github.repository_owner }}\
+            /generic/${{ github.event.repository.name }}/${{ env.VERSION }}"
         run: |
           # Iterate through all .deb and .rpm files in the dist/ directory
           for file in dist/*.deb dist/*.rpm; do
