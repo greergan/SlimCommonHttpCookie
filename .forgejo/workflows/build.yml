@@ -24,7 +24,6 @@ jobs:
           path: SlimLibraryPackager
 
       - name: Update env
-        working-directory: ${{ github.workspace }}
         run: |
           chmod +x ./SlimLibraryPackager/update_env.sh
           ./SlimLibraryPackager/update_env.sh
