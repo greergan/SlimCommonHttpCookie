@@ -14,8 +14,6 @@ jobs:
       options: --privileged
 
     steps:
-      - name: Install Node (Required for Checkout)
-        run: apt-get update && apt-get install -y nodejs
       - name: Checkout main repo
         uses: actions/checkout@v4
 
