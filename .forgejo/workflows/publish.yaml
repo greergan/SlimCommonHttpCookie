@@ -65,7 +65,7 @@ jobs:
 
       - name: Build Packages
         run: |
-          make packages GIT_URL=${{ vars.GIT_URL }}
+          make packages GIT_URL="${{ vars.GIT_URL }}/${{ vars.REPO_OWNER }}""
 
       - name: Publish to Forgejo Registry
         run: |
