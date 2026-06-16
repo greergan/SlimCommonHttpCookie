@@ -30,6 +30,12 @@ jobs:
           path: SlimLibraryPackager
           ref: master
 
+      - name: Validate configuration
+        run: |
+          if [ -z "${{ vars.GIT_URL }}" ]; then echo "Error: vars.GIT_URL is not set"; exit 1; fi
+          if [ -z "${{ secrets.REGISTRY_USER }}" ]; then echo "Error: secrets.REGISTRY_USER is not set"; exit 1; fi
+          if [ -z "${{ secrets.REGISTRY_TOKEN }}" ]; then echo "Error: secrets.REGISTRY_TOKEN is not set"; exit 1; fi
+
       - name: Determine Version
         run: |
           if [[ -n "${{ github.event.inputs.version }}" ]]; then
@@ -47,11 +53,11 @@ jobs:
 
       - name: Build Packages
         run: |
-          make packages
+          make packages GIT_URL=${{ vars.GIT_URL }}
 
       - name: Publish to Forgejo Registry
         run: |
-          REG_URL="${{ secrets.REGISTRY_URL }}"
+          REG_URL="${{ vars.GIT_URL }}"
           OWNER="${{ github.repository_owner }}"
           REPO="${{ github.event.repository.name }}"
 
@@ -65,8 +71,7 @@ jobs:
           for file in "${files[@]}"; do
             FILENAME=$(basename "$file")
             
-            # Extract version using sed (portable alternative to grep -P)
-            # Looks for v followed by numbers/dots and takes the match
+            # Extract version using sed
             FILE_VERSION=$(echo "$FILENAME" | sed -n 's/.*v\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/p')
             
             # Fallback to the env VERSION if regex doesn't match
