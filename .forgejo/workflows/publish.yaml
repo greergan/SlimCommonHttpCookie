@@ -65,15 +65,3 @@ jobs:
                    "$BASE_URL/$FILENAME"
             fi
           done
-
-      - name: Link Package to Repository
-        run: |
-          # Use the repository ID in the payload as required by Forgejo
-          URL="${{ secrets.REGISTRY_URL }}/api/v1/packages/${{ github.repository_owner }}/generic/${{ github.event.repository.name }}/${{ env.VERSION }}/repository"
-          
-          # Added -v (verbose) to help us see exactly what the server dislikes
-          curl -v -X POST "$URL" \
-            -H "Authorization: token ${{ secrets.REGISTRY_TOKEN }}" \
-            -H "Accept: application/json" \
-            -H "Content-Type: application/json" \
-            -d "{\"repository_id\": ${{ github.repository_id }}}"
