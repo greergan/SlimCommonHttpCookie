@@ -35,4 +35,8 @@ jobs:
             echo "Error: GIT_URL variable is not set in Forgejo UI."
             exit 1
           fi
-          make RELEASE_TYPE=Release SHARED_ONLY=OFF GIT_URL=${{ vars.GIT_URL }}
+          if [ -z "${{ vars.REPO_OWNER }}" ]; then
+            echo "Error: REPO_OWNER variable is not set in Forgejo UI."
+            exit 1
+          fi
+          make RELEASE_TYPE=Release SHARED_ONLY=OFF GIT_URL="${{ vars.GIT_URL }}/${{ vars.REPO_OWNER }}"
