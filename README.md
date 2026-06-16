@@ -1,3 +1,5 @@
+![SlimTS](https://github.com/greergan/SlimTS/blob/master/assets/slimts_logo.png)
+
 # SlimCommonHTTPCookie
 
 A lightweight, RFC6265-oriented HTTP cookie implementation in modern C++.  
