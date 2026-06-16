@@ -1,65 +1,29 @@
-name: build
-on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to publish (e.g., 1.0.1)'
-        required: false
-jobs:
-  build-and-publish:
-    runs-on: self-hosted
-    container:
-      image: slim-toolchain
-      options: --privileged
-    steps:
-      - name: Checkout main repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
-      - name: Checkout SlimLibraryPackager
-        uses: actions/checkout@v4
-        with:
-          repository: greergan/SlimLibraryPackager
-          path: SlimLibraryPackager
-          ref: master
-      - name: Determine Version
-        run: |
-          if [[ -n "${{ github.event.inputs.version }}" ]]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
-          elif [[ "$GITHUB_REF_NAME" == v* ]]; then
-            echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
-          else
-            echo "VERSION=0.0.0" >> $GITHUB_ENV
-          fi
-      - name: Update env
-        run: |
-          chmod +x ./SlimLibraryPackager/update_env.sh
-          ./SlimLibraryPackager/update_env.sh
-      - name: Build Packages
-        run: |
-          make packages
-      - name: Publish to Forgejo Registry
+- name: Publish to Forgejo Registry
         run: |
           REG_URL="${{ secrets.REGISTRY_URL }}"
           OWNER="${{ github.repository_owner }}"
           REPO="${{ github.event.repository.name }}"
-          BASE_URL="$REG_URL/api/packages/$OWNER/generic/$REPO/$VERSION"
 
           shopt -s nullglob
           files=(dist/*.deb dist/*.rpm)
-          if [[ ${#files[@]} -eq 0 ]]; then
-            echo "No packages found in dist/" && exit 1
-          fi
-
+          
           for file in "${files[@]}"; do
             FILENAME=$(basename "$file")
-            echo "Publishing $FILENAME..."
+            
+            # Extract version from filename (e.g., slimcommonhttpcookie-v0.9.0-amd64.deb -> 0.9.0)
+            # This regex looks for 'v' followed by digits and dots
+            FILE_VERSION=$(echo "$FILENAME" | grep -oP 'v\K[0-9]+\.[0-9]+\.[0-9]+')
+            
+            # Fallback to the env variable if the regex finds nothing
+            VERSION_TO_USE=${FILE_VERSION:-$VERSION}
+            
+            echo "Publishing $FILENAME as version $VERSION_TO_USE..."
+            
+            BASE_URL="$REG_URL/api/packages/$OWNER/generic/$REPO/$VERSION_TO_USE"
+            
             curl --fail -sS \
                  --user "${{ secrets.REGISTRY_USER }}:${{ secrets.REGISTRY_TOKEN }}" \
                  --upload-file "$file" \
                  "$BASE_URL/$FILENAME" \
-              || { echo "Failed to publish $FILENAME"; exit 1; }
+                 || { echo "Failed to publish $FILENAME"; exit 1; }
           done
