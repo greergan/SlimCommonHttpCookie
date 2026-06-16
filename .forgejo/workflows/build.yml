@@ -31,4 +31,4 @@ jobs:
 
       - name: Build
         run: |
-          make RELEASE_TYPE=Release SHARED_ONLY=OFF
+          make RELEASE_TYPE=Release SHARED_ONLY=OFF GIT_URL=${{ secrets.GIT_URL }}
