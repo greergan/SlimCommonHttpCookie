@@ -1,4 +1,6 @@
-![SlimTS](https://github.com/greergan/SlimTS/blob/master/assets/slimts_logo.png)
+<a href="https://codeberg.org/greergan/SlimTS">
+  <img src="https://raw.githubusercontent.com/greergan/SlimTS/master/assets/slimts_logo.png" width="75" alt="SlimTS Logo">
+</a>   
 
 # SlimCommonHTTPCookie
 
