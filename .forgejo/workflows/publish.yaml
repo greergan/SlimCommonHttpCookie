@@ -37,6 +37,11 @@ jobs:
             echo "Error: vars.GIT_URL is not set in Forgejo UI."
             exit 1
           fi
+
+          if [ -z "${{ vars.REPO_OWNER }}" ]; then 
+            echo "Error: vars.REPO_OWNER is not set in Forgejo UI."
+            exit 1
+          fi
           
           # Validate Secrets
           if [ -z "${{ secrets.REGISTRY_USER }}" ]; then 
@@ -65,7 +70,7 @@ jobs:
 
       - name: Build Packages
         run: |
-          make packages GIT_URL="${{ vars.GIT_URL }}/${{ vars.REPO_OWNER }}""
+          make packages GIT_URL="${{ vars.GIT_URL }}/${{ vars.REPO_OWNER }}"
 
       - name: Publish to Forgejo Registry
         run: |
