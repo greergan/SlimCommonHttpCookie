@@ -92,7 +92,7 @@ jobs:
             echo "Publishing $FILENAME as version $VERSION_TO_USE..."
             
             BASE_URL="$REG_URL/api/packages/$OWNER/generic/$REPO/$VERSION_TO_USE"
-            
+            echo "Target URL: $BASE_URL/$FILENAME"
             curl --fail -sS \
                  --user "${{ secrets.REGISTRY_USER }}:${{ secrets.REGISTRY_TOKEN }}" \
                  --upload-file "$file" \
