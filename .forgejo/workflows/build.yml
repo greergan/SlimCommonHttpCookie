@@ -39,4 +39,4 @@ jobs:
             echo "Error: REPO_OWNER variable is not set in Forgejo UI."
             exit 1
           fi
-          make RELEASE_TYPE=Release SHARED_ONLY=OFF GIT_URL="${{ vars.GIT_URL }}/${{ vars.REPO_OWNER }}"
+          make RELEASE_TYPE=RELEASE SHARED_ONLY=OFF SLIM_GIT_URL="${{ vars.GIT_URL }}" SLIM_GIT_REPO_OWNER="${{ vars.REPO_OWNER }}"
