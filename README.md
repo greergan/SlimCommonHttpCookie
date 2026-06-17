@@ -24,6 +24,7 @@ Built using [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPacka
   - [Validation](#validation)
   - [Serialization](#serialization)
 - [Building](#building)
+- [Dependencies](#dependencies)
 - [Examples](#examples)
 - [Forgejo Workflows](#forgejo-workflows)
   - [build.yml — Continuous Integration](#buildyml--continuous-integration)
@@ -41,6 +42,8 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 - Minimal runtime overhead in hot paths
 - Heavy use of `noexcept`
 
+[↑ Top](#slimcommonhttpcookie)
+
 ## Features
 
 | Feature | Description |
@@ -57,6 +60,8 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 | Serialize | Preallocated, zero-fragment string build |
 | Serialize | Cookie validation with thrown exceptions |
 | Error model | Strong enum-based status reporting via `CookieStatus` |
+
+[↑ Top](#slimcommonhttpcookie)
 
 ## Core API
 
@@ -108,6 +113,8 @@ Status values can be converted to a human-readable string via:
 std::string_view msg = slim::common::http::cookie::status::to_string(status);
 ```
 
+[↑ Top](#slimcommonhttpcookie)
+
 ### CookieException
 
 Thrown by the parameterised constructor and `serialize()` on validation failure.
@@ -119,6 +126,8 @@ public:
     explicit CookieException(std::string msg);  // arbitrary message
 };
 ```
+
+[↑ Top](#slimcommonhttpcookie)
 
 ### Cookie class
 
@@ -137,6 +146,8 @@ slim::common::http::Cookie c;
 | `Cookie(Cookie&&) noexcept` | Move construction is supported |
 | `Cookie& operator=(Cookie&&) noexcept` | Move assignment is supported |
 
+[↑ Top](#slimcommonhttpcookie)
+
 ### Operators
 
 | Operator | Description |
@@ -145,6 +156,8 @@ slim::common::http::Cookie c;
 | `bool operator!=(const Cookie&) const noexcept` | Inequality — inverse of `==` |
 
 Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain, and path. Two cookies sharing the same name are distinct if they differ in domain or path. Cookie names are case-sensitive — `Session` and `session` are different cookies. Value, expiry, and flags are not considered in equality.
+
+[↑ Top](#slimcommonhttpcookie)
 
 ### Setters
 
@@ -165,6 +178,8 @@ Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain
 | `void set_partitioned(bool) noexcept` | Set Partitioned flag |
 | `CookieStatus set_partitioned(std::string_view) noexcept` | Set Partitioned flag from string |
 
+[↑ Top](#slimcommonhttpcookie)
+
 ### Getters
 
 | Method | Returns |
@@ -180,6 +195,8 @@ Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain
 | `bool get_httponly() const noexcept` | HttpOnly flag (default: `false`) |
 | `bool get_partitioned() const noexcept` | Partitioned flag (default: `false`) |
 
+[↑ Top](#slimcommonhttpcookie)
+
 ### Validation
 
 ```cpp
@@ -192,6 +209,8 @@ Checks:
 - Host prefix rules
 - Domain/path correctness
 
+[↑ Top](#slimcommonhttpcookie)
+
 ### Serialization
 
 ```cpp
@@ -201,9 +220,23 @@ std::string Cookie::serialize() const;
 Outputs a fully formatted `Set-Cookie` header string.  
 Throws `CookieException` if validation fails or the cookie exceeds 4096 bytes.
 
+[↑ Top](#slimcommonhttpcookie)
+
 ## Building
 
 This library is built using [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager). See that repository for build instructions.
+
+[↑ Top](#slimcommonhttpcookie)
+
+## Dependencies
+
+External package dependencies for this library are declared in the `required_packages` file at the repository root. This file is read by [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) during the build process to resolve SlimCommon micro-libraries before compilation begins.
+
+```
+none
+```
+
+[↑ Top](#slimcommonhttpcookie)
 
 ## Examples
 
@@ -276,6 +309,8 @@ catch (const std::exception& e) {
 }
 ```
 
+[↑ Top](#slimcommonhttpcookie)
+
 ## Forgejo Workflows
 
 Two workflows are defined under `.forgejo/workflows/`.
@@ -297,6 +332,8 @@ Runs on a self-hosted runner using the `slim-toolchain` container image (privile
 |----------|-------------|
 | `GIT_URL` | Base URL of the Forgejo instance (e.g. `https://git.example.com`) |
 | `REPO_OWNER` | Repository owner/organisation name |
+
+[↑ Top](#slimcommonhttpcookie)
 
 ### `publish.yaml` — Release & Publish
 
@@ -328,3 +365,5 @@ Uses the same runner and container as the build workflow. Steps:
 |--------|-------------|
 | `REGISTRY_USER` | Username for authenticating with the package registry |
 | `REGISTRY_TOKEN` | Password or token for authenticating with the package registry |
+
+[↑ Top](#slimcommonhttpcookie)
