@@ -336,7 +336,7 @@ Runs on a self-hosted runner using the `slim-toolchain` container image (privile
 
 [↑ Top](#slimcommonhttpcookie)
 
-### `publish.yaml` — Release & Publish
+### `publish.yml` — Release & Publish
 
 Triggers on version tags matching `v*` (e.g. `v1.2.3`) and can also be run manually with an optional `version` input.
 
