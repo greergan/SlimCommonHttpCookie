@@ -19,6 +19,7 @@ Built using [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPacka
   - [CookieException](#cookieexception)
   - [Cookie class](#cookie-class)
   - [Constructors and object lifetime](#constructors-and-object-lifetime)
+  - [Friend classes](#friend-classes)
   - [Operators](#operators)
   - [Setters](#setters)
   - [Getters](#getters)
@@ -146,6 +147,14 @@ slim::common::http::Cookie c;
 | `Cookie& operator=(const Cookie&)` | Deleted — copies are not allowed |
 | `Cookie(Cookie&&) noexcept` | Move construction is supported |
 | `Cookie& operator=(Cookie&&) noexcept` | Move assignment is supported |
+
+[↑ Top](#slimcommonhttpcookie)
+
+### Friend classes
+
+```cpp
+friend class CookieStore;
+```
 
 [↑ Top](#slimcommonhttpcookie)
 
