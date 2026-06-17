@@ -7,6 +7,7 @@
 A lightweight, RFC6265-oriented HTTP cookie implementation in modern C++.  
 Acts as a validating, backing store for the [SlimTS](https://codeberg.org/greergan/SlimTS) Javascript Cookie object.  
 Part of the [SlimCommon](https://codeberg.org/greergan/SlimCommon) library.  
+Dependency of the [SlimCommonHttpCookieStore](https://codeberg.org/greergan/SlimCommonHttpCookieStore) micro-ibrary.  
 Built using [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager).
 
 ## Table of Contents
