@@ -57,7 +57,7 @@ jobs:
 
       - name: Build Packages
         run: |
-          make packages RELEASE_TYPE=RELEASE LOCAL_SRC=OFF SHARED_ONLY=OFF SLIM_GIT_URL="${{ vars.GIT_URL }}" SLIM_GIT_REPO_OWNER="${{ vars.REPO_OWNER }}"
+          make packages SLIM_GIT_URL="${{ vars.GIT_URL }}" SLIM_GIT_REPO_OWNER="${{ vars.REPO_OWNER }}"
 
       - name: Publish to Forgejo Registry
         run: |
