@@ -19,10 +19,10 @@ Built using [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPacka
   - [CookieException](#cookieexception)
   - [Cookie class](#cookie-class)
   - [Constructors and object lifetime](#constructors-and-object-lifetime)
-  - [Friend classes](#friend-classes)
   - [Operators](#operators)
   - [Setters](#setters)
   - [Getters](#getters)
+  - [Friend classes](#friend-classes)
   - [Validation](#validation)
   - [Serialization](#serialization)
 - [Building](#building)
@@ -150,24 +150,16 @@ slim::common::http::Cookie c;
 
 [↑ Top](#slimcommonhttpcookie)
 
-### Friend classes
-
-```cpp
-friend class CookieStore;
-```
-
-[↑ Top](#slimcommonhttpcookie)
-
 ### Operators
 
 | Operator | Description |
 |----------|-------------|
 | `bool operator==(const Cookie&) const noexcept` | Equality by name (case-sensitive), domain, and path |
-| `bool operator!=(const Cookie&) const noexcept` | Inequality — inverse of `==` |
 
 Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain, and path. Two cookies sharing the same name are distinct if they differ in domain or path. Cookie names are case-sensitive — `Session` and `session` are different cookies. Value, expiry, and flags are not considered in equality.
 
 [↑ Top](#slimcommonhttpcookie)
+
 
 ### Setters
 
@@ -207,6 +199,14 @@ Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain
 
 [↑ Top](#slimcommonhttpcookie)
 
+### Friend classes
+
+```cpp
+friend class CookieStore;
+```
+
+[↑ Top](#slimcommonhttpcookie)
+
 ### Validation
 
 ```cpp
@@ -225,6 +225,7 @@ Checks:
 
 ```cpp
 std::string Cookie::serialize() const;
+// -> "Set-Cookie: __Secure-session=abc123; Domain=example.com; Path=/; Max-Age=3600; SameSite=None; Secure; HttpOnly; Partitioned\r\n"
 ```
 
 Outputs a fully formatted `Set-Cookie` header string.  
@@ -240,7 +241,7 @@ This library is built using [SlimLibraryPackager](https://codeberg.org/greergan/
 
 ## Dependencies
 
-External package dependencies for this library are declared in the `required_packages` file at the repository root. This file is read by [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) during the build process to resolve SlimCommon micro-libraries before compilation begins.
+External package dependencies for this library are declared in the `required_packages` file at the repository root. This file is read by [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) during the build process to resolve dependencies and install them if not present.
 
 ```
 none

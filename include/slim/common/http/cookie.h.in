@@ -118,7 +118,6 @@ public:
     Cookie& operator=(Cookie&& other) noexcept = default;
 
     bool operator==(const Cookie& other) const noexcept;
-    bool operator!=(const Cookie& other) const noexcept { return !(*this == other); }
 
     ~Cookie() = default;
 
