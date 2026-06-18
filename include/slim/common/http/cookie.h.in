@@ -100,8 +100,14 @@ namespace cookie::status {
 
 class CookieException : public std::logic_error {
 public:
-    explicit CookieException(CookieStatus e) : std::logic_error("Invalid Cookie: " + std::string{cookie::status::to_string(e)}) {}
-    explicit CookieException(std::string msg) : std::logic_error(msg) {}
+    explicit CookieException(CookieStatus e)
+        : std::logic_error("Invalid Cookie: " + std::string{cookie::status::to_string(e)}), status(e) {}
+
+        explicit CookieException(std::string msg) : std::logic_error(msg) {}
+
+    CookieStatus error() const noexcept { return status; }
+private:
+    CookieStatus status;
 };
 
 class Cookie {
