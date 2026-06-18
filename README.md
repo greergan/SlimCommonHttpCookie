@@ -8,7 +8,8 @@ A lightweight, RFC6265-oriented HTTP cookie implementation in modern C++.
 Acts as a validating, backing store for the [SlimTS](https://codeberg.org/greergan/SlimTS) Javascript Cookie object.  
 Part of the [SlimCommon](https://codeberg.org/greergan/SlimCommon) library.  
 Dependency of the [SlimCommonHttpCookieStore](https://codeberg.org/greergan/SlimCommonHttpCookieStore) micro-ibrary.  
-Built using [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager).
+Built using [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager).  
+CI/CD supplied by unified workflows provided by [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager).
 
 ## Table of Contents
 
@@ -27,10 +28,8 @@ Built using [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPacka
   - [Serialization](#serialization)
 - [Building](#building)
 - [Dependencies](#dependencies)
+- [Workflows](#workflows)
 - [Examples](#examples)
-- [Forgejo Workflows](#forgejo-workflows)
-  - [build.yml — Continuous Integration](#buildyml--continuous-integration)
-  - [publish.yaml — Release & Publish](#publishyaml--release--publish)
 
 ## Overview
 
@@ -249,6 +248,12 @@ none
 
 [↑ Top](#slimcommonhttpcookie)
 
+## Workflows
+
+Forgejo Workflows are provided by [SlimLibraryPackager](http://codeberg.org/greergan/SlimLibraryPackager)
+
+[↑ Top](#slimcommonhttpcookie)
+
 ## Examples
 
 ```cpp
@@ -319,62 +324,5 @@ catch (const std::exception& e) {
     std::cerr << "Unexpected error: " << e.what() << '\n';
 }
 ```
-
-[↑ Top](#slimcommonhttpcookie)
-
-## Forgejo Workflows
-
-Two workflows are defined under `.forgejo/workflows/`.
-
-### `build.yml` — Continuous Integration
-
-Triggers on every push to `master` and can also be run manually via `workflow_dispatch`.
-
-Runs on a self-hosted runner using the `slim-toolchain` container image (privileged mode required). Steps:
-
-1. Checks out this repository.
-2. Checks out [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) into `./SlimLibraryPackager/`.
-3. Runs `update_env.sh` from SlimLibraryPackager to configure the build environment.
-4. Invokes `make` with `RELEASE_TYPE=Release` and `SHARED_ONLY=OFF`.
-
-**Required Forgejo variables** (set under *Settings → Variables*):
-
-| Variable | Description |
-|----------|-------------|
-| `GIT_URL` | Base URL of the Forgejo instance (e.g. `https://git.example.com`) |
-| `REPO_OWNER` | Repository owner/organisation name |
-
-[↑ Top](#slimcommonhttpcookie)
-
-### `publish.yml` — Release & Publish
-
-Triggers on version tags matching `v*` (e.g. `v1.2.3`) and can also be run manually with an optional `version` input.
-
-Uses the same runner and container as the build workflow. Steps:
-
-1. Checks out this repository at the triggering ref.
-2. Checks out [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) into `./SlimLibraryPackager/`.
-3. Validates that all required variables and secrets are present, exiting early with a descriptive error if any are missing.
-4. Determines the version to publish:
-   - Manual `workflow_dispatch` input takes precedence.
-   - Otherwise the version is stripped from the tag name (e.g. `v1.2.3` → `1.2.3`).
-   - Falls back to `0.0.0` if neither is available.
-5. Runs `update_env.sh` to configure the build environment.
-6. Invokes `make packages` to produce `.deb` and `.rpm` packages under `dist/`.
-7. Publishes each package to the Forgejo Generic Package Registry under `<repo>/<version>/<filename>` using HTTP PUT via `curl`.
-
-**Required Forgejo variables** (set under *Settings → Variables*):
-
-| Variable | Description |
-|----------|-------------|
-| `GIT_URL` | Base URL of the Forgejo instance |
-| `REPO_OWNER` | Repository owner/organisation name |
-
-**Required Forgejo secrets** (set under *Settings → Secrets*):
-
-| Secret | Description |
-|--------|-------------|
-| `REGISTRY_USER` | Username for authenticating with the package registry |
-| `REGISTRY_TOKEN` | Password or token for authenticating with the package registry |
 
 [↑ Top](#slimcommonhttpcookie)
