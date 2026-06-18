@@ -28,7 +28,6 @@ CI/CD supplied by unified workflows provided by [SlimLibraryPackager](https://co
   - [Serialization](#serialization)
 - [Building](#building)
 - [Dependencies](#dependencies)
-- [Workflows](#workflows)
 - [Examples](#examples)
 
 ## Overview
@@ -245,12 +244,6 @@ External package dependencies for this library are declared in the `required_pac
 ```
 none
 ```
-
-[↑ Top](#table-of-contents)
-
-## Workflows
-
-Forgejo Workflows are provided by [SlimLibraryPackager](http://codeberg.org/greergan/SlimLibraryPackager)
 
 [↑ Top](#table-of-contents)
 
