@@ -107,7 +107,7 @@ public:
 
     CookieStatus error() const noexcept { return status; }
 private:
-    CookieStatus status;
+    CookieStatus status = CookieStatus::OK;
 };
 
 class Cookie {
