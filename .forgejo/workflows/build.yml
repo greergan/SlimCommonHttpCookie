@@ -40,3 +40,22 @@ jobs:
             exit 1
           fi
           make RELEASE_TYPE=RELEASE SHARED_ONLY=OFF SLIM_GIT_URL="${{ vars.GIT_URL }}" SLIM_GIT_REPO_OWNER="${{ vars.REPO_OWNER }}"
+
+      # --- Email Notification Step ---
+      - name: Send mail on failure
+        if: failure()
+        uses: https://github.com/dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ vars.SMTP_SERVER_ADDR }}
+          server_port: ${{ vars.SMTP_SERVER_PORT }}
+          username: ${{ vars.SMTP_USER }}
+          password: ${{ secrets.SMTP_SERVER_PASSWORD }}
+          subject: 🚨 Build Failed: ${{ github.repository }}
+          to: ${{ vars.NOTIFICATIONS_EMAIL }}
+          from: ${{ vars.NOTIFICATIONS_FROM_EMAIL }}
+          body: |
+            The build job "${{ github.job }}" failed on branch "${{ github.ref_name }}".
+            Commit: ${{ github.sha }}
+            
+            View the detailed build logs here:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_number }}
