@@ -43,7 +43,7 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 - Minimal runtime overhead in hot paths
 - Heavy use of `noexcept`
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ## Features
 
@@ -62,7 +62,7 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 | Serialize | Cookie validation with thrown exceptions |
 | Error model | Strong enum-based status reporting via `CookieStatus` |
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ## Core API
 
@@ -114,7 +114,7 @@ Status values can be converted to a human-readable string via:
 std::string_view msg = slim::common::http::cookie::status::to_string(status);
 ```
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ### CookieException
 
@@ -128,7 +128,7 @@ public:
 };
 ```
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ### Cookie class
 
@@ -147,7 +147,7 @@ slim::common::http::Cookie c;
 | `Cookie(Cookie&&) noexcept` | Move construction is supported |
 | `Cookie& operator=(Cookie&&) noexcept` | Move assignment is supported |
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ### Operators
 
@@ -157,7 +157,7 @@ slim::common::http::Cookie c;
 
 Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain, and path. Two cookies sharing the same name are distinct if they differ in domain or path. Cookie names are case-sensitive — `Session` and `session` are different cookies. Value, expiry, and flags are not considered in equality.
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 
 ### Setters
@@ -179,7 +179,7 @@ Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain
 | `void set_partitioned(bool) noexcept` | Set Partitioned flag |
 | `CookieStatus set_partitioned(std::string_view) noexcept` | Set Partitioned flag from string |
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ### Getters
 
@@ -196,7 +196,7 @@ Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain
 | `bool get_httponly() const noexcept` | HttpOnly flag (default: `false`) |
 | `bool get_partitioned() const noexcept` | Partitioned flag (default: `false`) |
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ### Friend classes
 
@@ -204,7 +204,7 @@ Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain
 friend class CookieStore;
 ```
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ### Validation
 
@@ -218,7 +218,7 @@ Checks:
 - Host prefix rules
 - Domain/path correctness
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ### Serialization
 
@@ -230,13 +230,13 @@ std::string Cookie::serialize() const;
 Outputs a fully formatted `Set-Cookie` header string.  
 Throws `CookieException` if validation fails or the cookie exceeds 4096 bytes.
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ## Building
 
 This library is built using [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager). See that repository for build instructions.
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ## Dependencies
 
@@ -246,13 +246,13 @@ External package dependencies for this library are declared in the `required_pac
 none
 ```
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ## Workflows
 
 Forgejo Workflows are provided by [SlimLibraryPackager](http://codeberg.org/greergan/SlimLibraryPackager)
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
 
 ## Examples
 
@@ -325,4 +325,4 @@ catch (const std::exception& e) {
 }
 ```
 
-[↑ Top](#slimcommonhttpcookie)
+[↑ Top](#table-of-contents)
