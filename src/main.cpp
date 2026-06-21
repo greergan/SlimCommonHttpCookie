@@ -9,84 +9,18 @@
 #include <string_view>
 
 #include <slim/common/http/cookie.h>
+#include <slim/common/utilities.h>
 
 namespace slim::common::http {
 
 namespace {
 
-struct AsciiTables {
-    std::array<char, 256> to_lower{};
-    std::array<bool, 256> is_alnum{};
-    std::array<bool, 256> is_digit{};
-    std::array<bool, 256> is_space{};
-    std::array<bool, 256> is_cookie_char{};
-    std::array<bool, 256> is_date_delimiter{};
-
-    constexpr AsciiTables() noexcept {
-        for (size_t i = 0; i < 256; ++i) {
-            to_lower[i] = (i >= 'A' && i <= 'Z') ? static_cast<char>(i + 32) : static_cast<char>(i);
-            is_alnum[i] = (i >= 'a' && i <= 'z') || (i >= 'A' && i <= 'Z') || (i >= '0' && i <= '9');
-            is_digit[i] = (i >= '0' && i <= '9');
-            is_space[i] = (i == ' ' || i == '\t' || i == '\r' || i == '\n' || i == '\v' || i == '\f');
-
-            unsigned char uc = static_cast<unsigned char>(i);
-            is_cookie_char[i] = (uc == 0x21) || (uc >= 0x23 && uc <= 0x2B) || (uc >= 0x2D && uc <= 0x3A) ||
-                                (uc >= 0x3C && uc <= 0x5B) || (uc >= 0x5D && uc <= 0x7E);
-
-            is_date_delimiter[i] = (i == 0x09) || (i >= 0x20 && i <= 0x2F) || (i >= 0x3B && i <= 0x40) ||
-                                   (i >= 0x5B && i <= 0x60) || (i >= 0x7B && i <= 0x7E);
-        }
-    }
-};
-
-constexpr AsciiTables ascii{};
-
-constexpr std::size_t count_digits(std::uint_least64_t n) noexcept {
-    if (n == 0) return 1;
-    std::size_t digits = 0;
-    if (n >= 1000000000000000000ULL) { digits += 18; n /= 1000000000000000000ULL; }
-    if (n >= 1000000000ULL) { digits += 9; n /= 1000000000ULL; }
-    if (n >= 100000ULL) { digits += 5; n /= 100000ULL; }
-    if (n >= 100ULL) { digits += 2; n /= 100ULL; }
-    if (n >= 10ULL) { digits += 1; n /= 10ULL; }
-    return digits + 1;
+ErrorStatus get_bool(std::string_view s, bool& b) noexcept {
+    return slim::common::utilities::get_bool(s, b) ? ErrorStatus::OK : ErrorStatus::CookieInvalidBoolean;
 }
 
-constexpr bool iequals(std::string_view a, std::string_view b) noexcept {
-    if (a.size() != b.size()) return false;
-    for (size_t i = 0; i < a.size(); ++i)
-        if (ascii.to_lower[static_cast<unsigned char>(a[i])] != static_cast<unsigned char>(b[i])) return false;
-    return true;
-}
-
-constexpr void trim(std::string_view& s) noexcept {
-    while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.front())]) s.remove_prefix(1);
-    while (!s.empty() && ascii.is_space[static_cast<unsigned char>(s.back())]) s.remove_suffix(1);
-}
-
-constexpr ErrorStatus get_bool(std::string_view s, bool& b) noexcept {
-    trim(s);
-    if (iequals(s, "true")) { b = true; return ErrorStatus::OK; }
-    if (iequals(s, "false")) { b = false; return ErrorStatus::OK; }
-    return ErrorStatus::CookieInvalidBoolean;
-}
-
-constexpr int month_abbr_to_int(std::string_view s) noexcept {
-    if (s.size() < 3) return -1;
-    uint32_t val = (static_cast<uint32_t>(ascii.to_lower[static_cast<unsigned char>(s[0])]) << 16) |
-                   (static_cast<uint32_t>(ascii.to_lower[static_cast<unsigned char>(s[1])]) << 8) |
-                    static_cast<uint32_t>(ascii.to_lower[static_cast<unsigned char>(s[2])]);
-    switch(val) {
-        case 0x6a616e: return 0; case 0x666562: return 1; case 0x6d6172: return 2;
-        case 0x617072: return 3; case 0x6d6179: return 4; case 0x6a756e: return 5;
-        case 0x6a756c: return 6; case 0x617567: return 7; case 0x736570: return 8;
-        case 0x6f6374: return 9; case 0x6e6f76: return 10; case 0x646563: return 11;
-        default: return -1;
-    }
-}
-
-constexpr ErrorStatus validate_domain(std::string_view& s) noexcept {
-    trim(s);
+ErrorStatus validate_domain(std::string_view& s) noexcept {
+    slim::common::utilities::trim(s);
     if (s.empty()) return ErrorStatus::CookieDomainEmpty;
     const bool had_leading_dot = (s.front() == '.');
     if (had_leading_dot) s.remove_prefix(1);
@@ -101,8 +35,8 @@ constexpr ErrorStatus validate_domain(std::string_view& s) noexcept {
         if (label.front() == '-' || label.back() == '-') return ErrorStatus::CookieDomainLabelInvalidHyphen;
         for (char c : label) {
             const unsigned char uc = static_cast<unsigned char>(c);
-            if (dot == std::string_view::npos && ascii.is_digit[uc]) return ErrorStatus::CookieDomainNumericTld;
-            if (!ascii.is_alnum[uc] && c != '-') return ErrorStatus::CookieDomainInvalidChar;
+            if (dot == std::string_view::npos && slim::common::utilities::is_digit(static_cast<char>(uc))) return ErrorStatus::CookieDomainNumericTld;
+            if (!slim::common::utilities::is_alnum(static_cast<char>(uc)) && c != '-') return ErrorStatus::CookieDomainInvalidChar;
         }
         rem.remove_prefix(dot == std::string_view::npos ? rem.size() : dot + 1);
     }
@@ -110,16 +44,16 @@ constexpr ErrorStatus validate_domain(std::string_view& s) noexcept {
     return ErrorStatus::OK;
 }
 
-constexpr ErrorStatus validate_expires(std::string_view& s, std::optional<std::string>& expires) noexcept {
-    trim(s);
+ErrorStatus validate_expires(std::string_view& s, std::optional<std::string>& expires) noexcept {
+    slim::common::utilities::trim(s);
     bool found_time = false, found_dom = false, found_month = false, found_year = false;
     int hour = 0, minute = 0, second = 0, day = 0, month = 0, year = 0;
     std::size_t pos = 0;
     while (pos < s.size()) {
-        while (pos < s.size() && ascii.is_date_delimiter[static_cast<unsigned char>(s[pos])]) ++pos;
+        while (pos < s.size() && slim::common::utilities::is_date_delimiter(s[pos])) ++pos;
         if (pos >= s.size()) break;
         const std::size_t tok_start = pos;
-        while (pos < s.size() && !ascii.is_date_delimiter[static_cast<unsigned char>(s[pos])]) ++pos;
+        while (pos < s.size() && !slim::common::utilities::is_date_delimiter(s[pos])) ++pos;
         const std::size_t len = pos - tok_start;
         if (!found_time && len >= 8) {
             const auto h0 = static_cast<unsigned char>(s[tok_start + 0]), h1 = static_cast<unsigned char>(s[tok_start + 1]);
@@ -145,7 +79,7 @@ constexpr ErrorStatus validate_expires(std::string_view& s, std::optional<std::s
             }
         }
         if (!found_month && len >= 3) {
-            month = month_abbr_to_int(s.substr(tok_start, len));
+            month = slim::common::utilities::month_abbr_to_int(s.substr(tok_start, len));
             if (month != -1) { found_month = true; if (found_time && found_dom && found_year) break; continue; }
         }
         if (!found_year && len >= 2) {
@@ -194,8 +128,8 @@ constexpr ErrorStatus validate_expires(std::string_view& s, std::optional<std::s
     return ErrorStatus::OK;
 }
 
-constexpr ErrorStatus validate_path(std::string_view& s) noexcept {
-    trim(s);
+ErrorStatus validate_path(std::string_view& s) noexcept {
+    slim::common::utilities::trim(s);
     if (s.empty()) return ErrorStatus::OK;
     if (s.front() != '/') return ErrorStatus::CookiePathMissingLeadingSlash;
     for (char c : s) {
@@ -205,8 +139,8 @@ constexpr ErrorStatus validate_path(std::string_view& s) noexcept {
     return ErrorStatus::OK;
 }
 
-constexpr ErrorStatus validate_prefixes(std::string_view name, const std::optional<std::string>& domain,
-                                         const std::optional<std::string>& path, bool secure) noexcept {
+ErrorStatus validate_prefixes(std::string_view name, const std::optional<std::string>& domain,
+                               const std::optional<std::string>& path, bool secure) noexcept {
     if (name.empty()) return ErrorStatus::CookieNameEmpty;
     const bool is_secure_prefix = name.starts_with("__Secure-");
     const bool is_host_prefix   = name.starts_with("__Host-");
@@ -224,8 +158,8 @@ constexpr ErrorStatus validate_max_age(std::uint_least64_t v) noexcept {
            ? ErrorStatus::CookieMaxAgeExceedsLimit : ErrorStatus::OK;
 }
 
-constexpr ErrorStatus get_max_age_value(std::string_view& s, std::optional<std::uint_least64_t>& v) noexcept {
-    trim(s);
+ErrorStatus get_max_age_value(std::string_view& s, std::optional<std::uint_least64_t>& v) noexcept {
+    slim::common::utilities::trim(s);
     if (s.empty()) return ErrorStatus::CookieMaxAgeEmpty;
     bool is_negative = (!s.empty() && s[0] == '-');
     if(is_negative) s.remove_prefix(1);
@@ -237,8 +171,8 @@ constexpr ErrorStatus get_max_age_value(std::string_view& s, std::optional<std::
     else { ErrorStatus e = validate_max_age(temp_value); if(e == ErrorStatus::OK) v = temp_value; return e; }
 }
 
-constexpr ErrorStatus validate_name(std::string_view& s) noexcept {
-    trim(s);
+ErrorStatus validate_name(std::string_view& s) noexcept {
+    slim::common::utilities::trim(s);
     if (s.empty()) return ErrorStatus::CookieNameEmpty;
     for (char c : s) {
         unsigned char uc = static_cast<unsigned char>(c);
@@ -252,34 +186,35 @@ constexpr ErrorStatus validate_name(std::string_view& s) noexcept {
     return ErrorStatus::OK;
 }
 
-constexpr ErrorStatus validate_partitioned(bool partitioned, bool secure,
-                                            const std::optional<std::string>& same_site) noexcept {
+ErrorStatus validate_partitioned(bool partitioned, bool secure,
+                                  const std::optional<std::string>& same_site) noexcept {
     if(partitioned) {
         if(!secure) return ErrorStatus::CookiePartitionedRequiresSecure;
-        if(!same_site || !iequals(*same_site, "none")) return ErrorStatus::CookiePartitionedRequiresSameSiteNone;
+        if(!same_site || !slim::common::utilities::iequals(*same_site, "none")) return ErrorStatus::CookiePartitionedRequiresSameSiteNone;
     }
     return ErrorStatus::OK;
 }
 
-constexpr ErrorStatus validate_secure(const std::optional<std::string>& same_site, bool secure) noexcept {
+ErrorStatus validate_secure(const std::optional<std::string>& same_site, bool secure) noexcept {
     if(!same_site.has_value()) return ErrorStatus::OK;
-    return (iequals(same_site.value(), "none") && !secure) ? ErrorStatus::CookieSameSiteNoneRequiresSecure : ErrorStatus::OK;
+    return (slim::common::utilities::iequals(same_site.value(), "none") && !secure) ? ErrorStatus::CookieSameSiteNoneRequiresSecure : ErrorStatus::OK;
 }
 
-constexpr ErrorStatus validate_same_site(std::string_view& s) noexcept {
-    trim(s);
-    if (iequals(s, "strict") || iequals(s, "lax") || iequals(s, "none")) return ErrorStatus::OK;
+ErrorStatus validate_same_site(std::string_view& s) noexcept {
+    slim::common::utilities::trim(s);
+    if (slim::common::utilities::iequals(s, "strict") || slim::common::utilities::iequals(s, "lax") ||
+        slim::common::utilities::iequals(s, "none")) return ErrorStatus::OK;
     return ErrorStatus::CookieSameSiteInvalid;
 }
 
-constexpr ErrorStatus validate_value(std::string_view& s) noexcept {
-    trim(s);
+ErrorStatus validate_value(std::string_view& s) noexcept {
+    slim::common::utilities::trim(s);
     if (s.empty()) return ErrorStatus::OK;
     if (s.front() == '"') {
         if (s.size() < 2 || s.back() != '"') return ErrorStatus::CookieValueUnmatchedQuote;
         s.remove_prefix(1); s.remove_suffix(1);
     }
-    for (char c : s) { if (!ascii.is_cookie_char[static_cast<unsigned char>(c)]) return ErrorStatus::CookieValueInvalidChar; }
+    for (char c : s) { if (!slim::common::utilities::is_cookie_char(c)) return ErrorStatus::CookieValueInvalidChar; }
     return ErrorStatus::OK;
 }
 
@@ -365,7 +300,7 @@ std::string Cookie::serialize() const {
     if (secure) total_size += 8;
     if (httponly) total_size += 10;
     if (partitioned) total_size += 13;
-    if (max_age.has_value()) total_size += 10 + count_digits(*max_age);
+    if (max_age.has_value()) total_size += 10 + slim::common::utilities::count_digits(*max_age);
     if(total_size > 4096) throw(HttpHeaderException(ErrorStatus::CookieTooLarge));
 
     std::string result; result.reserve(total_size);
