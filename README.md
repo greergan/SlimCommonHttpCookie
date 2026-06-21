@@ -16,8 +16,8 @@ CI/CD supplied by unified workflows provided by [SlimLibraryPackager](https://co
 - [Overview](#overview)
 - [Features](#features)
 - [Core API](#core-api)
-  - [CookieStatus enum](#cookiestatus-enum)
-  - [CookieException](#cookieexception)
+  - [ErrorStatus enum](#errorstatus-enum)
+  - [HttpHeaderException](#httpheaderexception)
   - [Cookie class](#cookie-class)
   - [Constructors and object lifetime](#constructors-and-object-lifetime)
   - [Operators](#operators)
@@ -36,7 +36,7 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 - RFC 6265 compliant parsing behavior
 - Strong validation for all cookie attributes
 - Zero dynamic allocation in validation paths (where possible)
-- Explicit status reporting via `CookieStatus`
+- Explicit status reporting via [`ErrorStatus`](https://codeberg.org/greergan/SlimCommonHttp)
 - Strict parsing over permissive recovery
 - Explicit validation at each setter
 - Minimal runtime overhead in hot paths
@@ -59,73 +59,54 @@ This library provides a strict, validation-heavy HTTP cookie parser and serializ
 | Secure / HttpOnly / Partitioned | Boolean attribute parsing |
 | Serialize | Preallocated, zero-fragment string build |
 | Serialize | Cookie validation with thrown exceptions |
-| Error model | Strong enum-based status reporting via `CookieStatus` |
+| Error model | Strong enum-based status reporting via `ErrorStatus` (from [SlimCommonHttp](https://codeberg.org/greergan/SlimCommonHttp)) |
 
 [↑ Top](#table-of-contents)
 
 ## Core API
 
-### CookieStatus enum
+### ErrorStatus enum
 
-All setters and `validate()` return a `CookieStatus`. The full set of values is:
+`ErrorStatus` is the scoped enum provided by [SlimCommonHttp](https://codeberg.org/greergan/SlimCommonHttp).
 
-| Value | Meaning |
-|-------|---------|
-| `OK` | Success |
-| `CookieTooLarge` | Cookie exceeds the 4096-byte limit |
-| `DomainBareDot` | Domain cannot consist of a bare dot |
-| `DomainEmpty` | Domain name cannot be empty |
-| `DomainInvalidChar` | Domain contains an invalid character |
-| `DomainLabelEmpty` | Domain label cannot be empty |
-| `DomainLabelInvalidHyphen` | Domain label has a hyphen in an invalid position |
-| `DomainLabelTooLong` | Domain label exceeds the maximum allowed length |
-| `DomainNumericTld` | Top-level domain must not be numeric |
-| `DomainTooLong` | Domain name exceeds the maximum allowed length |
-| `DomainTrailingDot` | Domain name must not end with a trailing dot |
-| `EmptyCookieString` | Cookie string cannot be empty |
-| `ExpiresInvalidFormat` | Expires attribute has an invalid date format |
-| `InvalidBoolean` | Expected a valid boolean value |
-| `InvalidCookieName` | Cookie name is invalid |
-| `InvalidCookieValue` | Cookie value is invalid |
-| `MalformedCookieMissingEquals` | Malformed cookie: missing `=` separator |
-| `MalformedCookiePairMissingEquals` | Malformed cookie pair: missing `=` separator |
-| `MaxAgeEmpty` | Max-Age attribute cannot be empty |
-| `MaxAgeExceedsLimit` | Max-Age value exceeds the maximum allowed limit |
-| `MaxAgeInvalidFormat` | Max-Age attribute has an invalid format |
-| `MaxAgeTrailingChars` | Max-Age value has unexpected trailing characters |
-| `NameEmpty` | Cookie name cannot be empty |
-| `NameHostPrefixHasDomain` | The `__Host-` prefix cannot be combined with a Domain attribute |
-| `NameHostPrefixInvalidPath` | The `__Host-` prefix requires the Path attribute to be `/` |
-| `NameInvalidChar` | Cookie name contains an invalid character |
-| `NamePrefixRequiresSecure` | Cookie name prefix requires the Secure attribute |
-| `PartitionedRequiresSameSiteNone` | Partitioned cookies require `SameSite=None` |
-| `PartitionedRequiresSecure` | Partitioned cookies require the Secure attribute |
-| `PathInvalidChar` | Path contains an invalid character |
-| `PathMissingLeadingSlash` | Path must begin with a forward slash |
-| `SameSiteInvalid` | SameSite attribute has an invalid value |
-| `SameSiteNoneRequiresSecure` | `SameSite=None` requires the Secure attribute |
-| `ValueInvalidChar` | Cookie value contains an invalid character |
-| `ValueUnmatchedQuote` | Cookie value has an unmatched quotation mark |
+Values are grouped by concern rather than by call site:
 
-Status values can be converted to a human-readable string via:
+| Group | Examples | Meaning |
+|-------|----------|---------|
+| Name | `CookieNameEmpty`, `CookieInvalidName`, `CookieNameInvalidChar` | Cookie name is missing or contains disallowed characters |
+| Name prefixes | `CookieNamePrefixRequiresSecure`, `CookieNameHostPrefixHasDomain`, `CookieNameHostPrefixInvalidPath` | `__Secure-` / `__Host-` prefix rules were violated |
+| Value | `CookieInvalidValue`, `CookieValueInvalidChar`, `CookieValueUnmatchedQuote` | Cookie value is malformed |
+| Domain | `CookieDomainEmpty`, `CookieDomainTooLong`, `CookieDomainBareDot`, `CookieDomainTrailingDot`, `CookieDomainNumericTld`, `CookieDomainLabelEmpty`, `CookieDomainLabelTooLong`, `CookieDomainLabelInvalidHyphen`, `CookieDomainInvalidChar` | Domain attribute fails RFC label/length/syntax checks |
+| Path | `CookiePathMissingLeadingSlash`, `CookiePathInvalidChar` | Path attribute is malformed |
+| Expires / Max-Age | `CookieExpiresInvalidFormat`, `CookieMaxAgeEmpty`, `CookieMaxAgeInvalidFormat`, `CookieMaxAgeTrailingChars`, `CookieMaxAgeExceedsLimit` | Date or lifetime attribute could not be parsed |
+| SameSite | `CookieSameSiteInvalid`, `CookieSameSiteNoneRequiresSecure` | SameSite value or Secure-pairing rule violated |
+| Partitioned (CHIPS) | `CookiePartitionedRequiresSecure`, `CookiePartitionedRequiresSameSiteNone` | Partitioned attribute used without its required companions |
+| General | `CookieEmptyString`, `CookieTooLarge`, `CookieInvalidBoolean`, `CookieMalformedMissingEquals`, `CookieMalformedPairMissingEquals` | Whole-cookie or parsing-level failures |
+| Header-level | `HeaderNameEmpty`, `HeaderNameInvalidChar`, `HeaderValueEmpty`, `HeaderValueInvalidChar`, `HeaderValueInvalidFolding`, `HeaderDelimiterInvalid` | Shared with other `SlimCommonHttp` header types |
+| `OK` | — | No error; the operation succeeded |
+
+Every value also has a human-readable description, retrievable without allocation:
 
 ```cpp
-std::string_view msg = slim::common::http::cookie::status::to_string(status);
+[[nodiscard]] constexpr std::string_view error::status::to_string(ErrorStatus status) noexcept;
 ```
+
+```cpp
+ErrorStatus e = c.set_domain("-bad-.com");
+if (e != ErrorStatus::OK) {
+    std::cerr << error::status::to_string(e) << '\n';
+    // -> "Cookie domain label has a hyphen in an invalid position"
+}
+```
+
+`to_string` is `constexpr` and backed by a fixed `std::array<std::string_view, ...>`, so lookups are O(1) and allocation-free; an out-of-range value safely returns `"Unknown"` rather than invoking undefined behavior.
 
 [↑ Top](#table-of-contents)
 
-### CookieException
+### HttpHeaderException
 
-Thrown by the parameterised constructor and `serialize()` on validation failure.
+`HttpHeaderException` is the exception class provided by [SlimCommonHttp](https://codeberg.org/greergan/SlimCommonHttp).  
 
-```cpp
-class CookieException : public std::logic_error {
-public:
-    explicit CookieException(CookieStatus e);   // formats "Invalid Cookie: <status string>"
-    explicit CookieException(std::string msg);  // arbitrary message
-};
-```
 
 [↑ Top](#table-of-contents)
 
@@ -140,7 +121,7 @@ slim::common::http::Cookie c;
 | Form | Description |
 |------|-------------|
 | `Cookie()` | Default constructor, produces an empty cookie |
-| `Cookie(std::string_view name, std::string_view value)` | Construct with name and value, validated immediately. Throws `CookieException` on failure |
+| `Cookie(std::string_view name, std::string_view value)` | Construct with name and value, validated immediately. Throws `HttpHeaderException` on failure |
 | `Cookie(const Cookie&)` | Deleted — copies are not allowed |
 | `Cookie& operator=(const Cookie&)` | Deleted — copies are not allowed |
 | `Cookie(Cookie&&) noexcept` | Move construction is supported |
@@ -163,20 +144,20 @@ Per RFC 6265 §5.3, a cookie is uniquely identified by the tuple of name, domain
 
 | Method | Description |
 |--------|-------------|
-| `CookieStatus set_name(std::string_view) noexcept` | Set cookie name (validated) |
-| `CookieStatus set_value(std::string_view) noexcept` | Set cookie value (validated) |
-| `CookieStatus set_domain(std::string_view) noexcept` | Set domain with RFC checks |
-| `CookieStatus set_path(std::string_view) noexcept` | Set path (must start with `/`) |
-| `CookieStatus set_expires(std::string_view) noexcept` | Set expiry string (RFC 6265 cookie-date parser) |
-| `CookieStatus set_max_age(std::uint_least64_t) noexcept` | Set Max-Age from integer |
-| `CookieStatus set_max_age(std::string_view) noexcept` | Set Max-Age from string |
-| `CookieStatus set_same_site(std::string_view) noexcept` | Set SameSite policy |
+| `ErrorStatus set_name(std::string_view) noexcept` | Set cookie name (validated) |
+| `ErrorStatus set_value(std::string_view) noexcept` | Set cookie value (validated) |
+| `ErrorStatus set_domain(std::string_view) noexcept` | Set domain with RFC checks |
+| `ErrorStatus set_path(std::string_view) noexcept` | Set path (must start with `/`) |
+| `ErrorStatus set_expires(std::string_view) noexcept` | Set expiry string (RFC 6265 cookie-date parser) |
+| `ErrorStatus set_max_age(std::uint_least64_t) noexcept` | Set Max-Age from integer |
+| `ErrorStatus set_max_age(std::string_view) noexcept` | Set Max-Age from string |
+| `ErrorStatus set_same_site(std::string_view) noexcept` | Set SameSite policy |
 | `void set_secure(bool) noexcept` | Set Secure flag |
-| `CookieStatus set_secure(std::string_view) noexcept` | Set Secure flag from string |
+| `ErrorStatus set_secure(std::string_view) noexcept` | Set Secure flag from string |
 | `void set_httponly(bool) noexcept` | Set HttpOnly flag |
-| `CookieStatus set_httponly(std::string_view) noexcept` | Set HttpOnly flag from string |
+| `ErrorStatus set_httponly(std::string_view) noexcept` | Set HttpOnly flag from string |
 | `void set_partitioned(bool) noexcept` | Set Partitioned flag |
-| `CookieStatus set_partitioned(std::string_view) noexcept` | Set Partitioned flag from string |
+| `ErrorStatus set_partitioned(std::string_view) noexcept` | Set Partitioned flag from string |
 
 [↑ Top](#table-of-contents)
 
@@ -208,7 +189,7 @@ friend class CookieStore;
 ### Validation
 
 ```cpp
-CookieStatus Cookie::validate() const noexcept;
+ErrorStatus Cookie::validate() const noexcept;
 ```
 
 Checks:
@@ -227,7 +208,7 @@ std::string Cookie::serialize() const;
 ```
 
 Outputs a fully formatted `Set-Cookie` header string.  
-Throws `CookieException` if validation fails or the cookie exceeds 4096 bytes.
+Throws `HttpHeaderException` if validation fails or the cookie exceeds 4096 bytes.
 
 [↑ Top](#table-of-contents)
 
@@ -239,11 +220,13 @@ This library is built using [SlimLibraryPackager](https://codeberg.org/greergan/
 
 ## Dependencies
 
-External package dependencies for this library are declared in the `required_packages` file at the repository root. This file is read by [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) during the build process to resolve dependencies and install them if not present.
+External package dependencies for this library are declared in the [`required_packages`](https://codeberg.org/greergan/SlimCommonHttpCookie/src/branch/master/required_packages) file at the repository root. This file is read by [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) during the build process to resolve dependencies and install them if not present.
 
 ```
-none
+SlimCommonHttp
 ```
+
+- [SlimCommonHttp](https://codeberg.org/greergan/SlimCommonHttp)
 
 [↑ Top](#table-of-contents)
 
@@ -253,28 +236,28 @@ none
 // Parameterised constructor with status checking
 slim::common::http::Cookie c("session", "abc123");
 
-CookieStatus e = c.set_path("/");
-if (e != CookieStatus::OK) return e;
+ErrorStatus e = c.set_path("/");
+if (e != ErrorStatus::OK) return e;
 
 e = c.set_secure(true);
-if (e != CookieStatus::OK) return e;
+if (e != ErrorStatus::OK) return e;
 ```
 
 ```cpp
 // Default constructor with status checking
 slim::common::http::Cookie c;
 
-CookieStatus e = c.set_name("session");
-if (e != CookieStatus::OK) return e;
+ErrorStatus e = c.set_name("session");
+if (e != ErrorStatus::OK) return e;
 
 e = c.set_value("abc123");
-if (e != CookieStatus::OK) return e;
+if (e != ErrorStatus::OK) return e;
 
 e = c.set_path("/");
-if (e != CookieStatus::OK) return e;
+if (e != ErrorStatus::OK) return e;
 
 e = c.set_secure(true);
-if (e != CookieStatus::OK) return e;
+if (e != ErrorStatus::OK) return e;
 ```
 
 ```cpp
@@ -287,7 +270,7 @@ try {
     auto header = c.serialize();
     // -> "Set-Cookie: session=abc123; Path=/; Secure\r\n"
 }
-catch (const slim::common::http::CookieException& e) {
+catch (const slim::common::http::HttpHeaderException& e) {
     std::cerr << "Cookie error: " << e.what() << '\n';
 }
 catch (const std::exception& e) {
@@ -310,7 +293,7 @@ try {
     auto header = c.serialize();
     // -> "Set-Cookie: __Secure-session=abc123; Domain=example.com; Path=/; Max-Age=3600; SameSite=None; Secure; HttpOnly; Partitioned\r\n"
 }
-catch (const slim::common::http::CookieException& e) {
+catch (const slim::common::http::HttpHeaderException& e) {
     std::cerr << "Cookie serialization failed: " << e.what() << '\n';
 }
 catch (const std::exception& e) {
